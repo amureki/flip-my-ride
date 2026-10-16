@@ -1,3 +1,4 @@
+import { makeParkingFeedback, fitsParkingBay } from "./parking-feedback";
 import { makeEasterEggs, type EggState } from "./easter-eggs";
 import { vehicleLandingHeight, vehicleShapes } from "./vehicles";
 import { trackEvent } from "./analytics";
@@ -171,10 +172,12 @@ scene.add(makeAsphalt(renderer.capabilities.getMaxAnisotropy()));
 const parkingBay = new THREE.Group();
 scene.add(parkingBay);
 box(2.7, 0.018, 4.1, 0x809b69, 0, 0.012, 0, parkingBay);
+const bayBorders: THREE.Mesh[] = [];
 for (const x of [-1.35, 1.35])
-  box(0.08, 0.025, 4.1, 0xeaffc6, x, 0.025, 0, parkingBay);
+  bayBorders.push(box(0.08, 0.025, 4.1, 0xeaffc6, x, 0.025, 0, parkingBay));
 for (const z of [-2.05, 2.05])
-  box(2.7, 0.025, 0.08, 0xeaffc6, 0, 0.025, z, parkingBay);
+  bayBorders.push(box(2.7, 0.025, 0.08, 0xeaffc6, 0, 0.025, z, parkingBay));
+const parkingFeedback = makeParkingFeedback(parkingBay, bayBorders);
 const textCanvas = document.createElement("canvas");
 textCanvas.width = 128;
 textCanvas.height = 128;
@@ -335,13 +338,19 @@ const aim = new THREE.Group();
 scene.add(aim);
 aim.visible = false;
 const ring = new THREE.Mesh(
-  new THREE.RingGeometry(0.7, 0.745, 48),
+  new THREE.RingGeometry(0.7, 0.73, 48),
   new THREE.MeshBasicMaterial({ color: 0xfff5ce, side: THREE.DoubleSide, depthTest: false, depthWrite: false }),
 );
 ring.renderOrder = 10;
 ring.rotation.x = -Math.PI / 2;
 ring.position.y = 0.07;
 aim.add(ring);
+const markerBacking = new THREE.Mesh(new THREE.CircleGeometry(0.38, 32),
+  new THREE.MeshBasicMaterial({ color: 0x28323a, transparent: true, opacity: 0.22, depthTest: false, depthWrite: false }));
+markerBacking.rotation.x = -Math.PI / 2;
+markerBacking.position.y = 0.065;
+markerBacking.renderOrder = 9;
+aim.add(markerBacking);
 const aimSymbols = [
   [[-0.24, 0], [-0.06, -0.18], [-0.06, -0.18], [0.26, 0.23]],
   [[0, 0.27], [0, -0.08], [0, -0.2], [0, -0.27]],
@@ -667,8 +676,7 @@ function finishFlight() {
   // Require the complete upright car footprint to fit inside the parking bay.
   if (
     position.y === 0 &&
-    Math.abs(position.x - target.x) <= 0.51 &&
-    Math.abs(position.z - target.z) <= 0.68
+    fitsParkingBay(position.x, position.z, target.x, target.z)
   ) {
     won = true;
     if (replay) return;
@@ -1099,6 +1107,9 @@ renderer.setAnimationLoop((now: number) => {
   }
   brakeLight.emissiveIntensity = !flight && touchdown < 1 ? 0.55 + 0.65 * (1 - touchdown) : 0.35;
   contactShadow.update(pivot, obstacleHeight(pivot.position.x, pivot.position.z));
+  const aimedFit = aim.visible && !flight && obstacleHeight(landing.x, landing.z) === 0 &&
+    fitsParkingBay(landing.x, landing.z, target.x, target.z);
+  parkingFeedback.update(dt, aimedFit, won, reducedMotion.matches);
   exhaust.update(dt, !reducedMotion.matches);
   easterEggs.update(dt, won || !!replay);
   renderer.render(scene, camera);

@@ -6,7 +6,7 @@ export function makeLotBase() {
   const root = new THREE.Group();
   for (const [width, height, depth, y, color, radius] of [
     [22, 0.5, 20, -0.6, 0xa8b1a5, 0.12],
-    [18.8, 0.3, 16, -0.28, 0xc8cbce, 0.08],
+    [18.8, 0.3, 16, -0.28, 0xb9bec0, 0.08],
     [18, 0.1, 15, -0.08, 0x737b83, 0.025],
   ]) {
     const slab = new THREE.Mesh(new RoundedBoxGeometry(width, height, depth, 2, radius),
@@ -99,14 +99,14 @@ export function makeParkedCar(color: number, model: VehicleModel = "compact") {
 export function makeTree(index: number) {
   const root = new THREE.Group();
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.16, 1.6, 7),
-    new THREE.MeshStandardMaterial({ color: 0x75664f, roughness: 1 }));
+    new THREE.MeshStandardMaterial({ color: 0x7a705e, roughness: 1 }));
   trunk.position.y = 0.5;
   trunk.castShadow = true;
   root.add(trunk);
   const geometry = new THREE.IcosahedronGeometry(1, 1);
   for (const [x, y, z, scale, color] of [
-    [0, 1.85, 0, 1, 0x607748], [-0.42, 1.45, 0.12, 0.65, 0x566e43],
-    [0.34, 1.6, -0.18, 0.7, 0x6b8050],
+    [0, 1.85, 0, 1, 0x6b7b59], [-0.42, 1.45, 0.12, 0.65, 0x627451],
+    [0.34, 1.6, -0.18, 0.7, 0x748361],
   ]) {
     const crown = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true }));
     crown.position.set(x, y, z);
