@@ -123,29 +123,68 @@ const p = new THREE.Mesh(
 p.rotation.x = -Math.PI / 2;
 p.position.set(0, 0.04, 0);
 parkingBay.add(p);
+const sign = new THREE.Group();
+sign.position.set(4.2, 0, -6.9);
+sign.rotation.y = 0.2;
 const signCanvas = document.createElement("canvas");
-signCanvas.width = 512;
-signCanvas.height = 256;
+signCanvas.width = 768;
+signCanvas.height = 640;
 const signContext = signCanvas.getContext("2d")!;
-signContext.fillStyle = "#ffffff";
-signContext.fillRect(0, 0, 512, 256);
-signContext.strokeStyle = "#b52c28";
-signContext.lineWidth = 16;
-signContext.strokeRect(8, 8, 496, 240);
-signContext.fillStyle = "#16191d";
-signContext.font = "bold 64px Arial";
+signContext.fillStyle = "#f8f7f1";
+signContext.beginPath();
+signContext.roundRect(0, 0, 768, 640, 40);
+signContext.fill();
+signContext.strokeStyle = "#b52624";
+signContext.lineWidth = 18;
+signContext.beginPath();
+signContext.roundRect(25, 25, 718, 590, 24);
+signContext.stroke();
 signContext.textAlign = "center";
-signContext.fillText("NO", 256, 99);
-signContext.fillText("KICKFLIPS", 256, 185);
+signContext.fillStyle = "#b52624";
+signContext.font = "bold 184px Arial";
+signContext.fillText("NO", 384, 288);
+signContext.fillStyle = "#20252c";
+signContext.font = "bold 109px Arial";
+signContext.fillText("KICKFLIPS", 384, 442);
 const signTexture = new THREE.CanvasTexture(signCanvas);
 signTexture.colorSpace = THREE.SRGBColorSpace;
-const sign = new THREE.Mesh(
-  new THREE.PlaneGeometry(3.6, 1.8),
-  new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide }),
+signTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const signOutline = new THREE.Shape();
+signOutline.moveTo(-1.2, -1.15);
+signOutline.lineTo(1.2, -1.15);
+signOutline.quadraticCurveTo(1.38, -1.15, 1.38, -0.97);
+signOutline.lineTo(1.38, 0.97);
+signOutline.quadraticCurveTo(1.38, 1.15, 1.2, 1.15);
+signOutline.lineTo(-1.2, 1.15);
+signOutline.quadraticCurveTo(-1.38, 1.15, -1.38, 0.97);
+signOutline.lineTo(-1.38, -0.97);
+signOutline.quadraticCurveTo(-1.38, -1.15, -1.2, -1.15);
+const signMetal = new THREE.MeshStandardMaterial({
+  color: 0xabb3b9, metalness: 0.65, roughness: 0.42,
+});
+const signPlate = new THREE.Mesh(
+  new THREE.ExtrudeGeometry(signOutline, { depth: 0.055, bevelEnabled: false, curveSegments: 6 }),
+  signMetal,
 );
-sign.position.set(4.2, 2.7, -6.9);
-sign.rotation.y = Math.atan2(camera.position.x, camera.position.z);
-box(0.12, 1.8, 0.12, 0x535c67, 4.2, 0.9, -6.95);
+signPlate.position.set(0, 2.85, -0.03);
+signPlate.castShadow = true;
+sign.add(signPlate);
+const signFace = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.76, 2.3),
+  new THREE.MeshStandardMaterial({ map: signTexture, transparent: true, roughness: 0.65, metalness: 0.05 }),
+);
+signFace.position.set(0, 2.85, 0.028);
+sign.add(signFace);
+const signPost = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 3.65, 12), signMetal);
+signPost.position.set(0, 1.825, -0.12);
+signPost.castShadow = true;
+sign.add(signPost);
+for (const y of [1.92, 3.78]) {
+  const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), signMetal);
+  bolt.scale.z = 0.4;
+  bolt.position.set(0, y, 0.04);
+  sign.add(bolt);
+}
 scene.add(sign);
 function makeCar(color: number) {
   const root = new THREE.Group();
