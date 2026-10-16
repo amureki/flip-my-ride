@@ -294,8 +294,8 @@ let flight: {
 let pointer: number | null = null;
 let dragStart = new THREE.Vector2();
 let landing = position.clone();
-let chargeStart: number | null = null;
-let keyboardDirection = new THREE.Vector3(1, 0, -1).normalize();
+const aimKeys = new Set<string>();
+let keyboardAiming = false;
 const raycaster = new THREE.Raycaster();
 const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 function worldAt(x: number, y: number) {
@@ -316,7 +316,7 @@ function showAim(delta: THREE.Vector3) {
   landing.copy(position).add(delta);
   if (position.distanceTo(landing) < 0.3) {
     clearAim();
-    message.textContent = "Drag farther to flip.";
+    message.textContent = keyboardAiming ? "Move the marker farther to flip." : "Drag farther to flip.";
     return;
   }
   aim.position.copy(landing);
@@ -336,7 +336,9 @@ function showAim(delta: THREE.Vector3) {
   );
   message.textContent = outside
     ? "That is technically outside the parking lot."
-    : "Release to commit to this engineering decision.";
+    : keyboardAiming
+      ? "Press Space to flip."
+      : "Release to commit to this engineering decision.";
 }
 function clearAim() {
   aim.visible = false;
@@ -344,6 +346,8 @@ function clearAim() {
   powerFill.style.width = "0";
 }
 function launch() {
+  aimKeys.clear();
+  keyboardAiming = false;
   const distance = position.distanceTo(landing);
   clearAim();
   if (distance < 0.3 || won || flight) return;
@@ -380,7 +384,8 @@ function reset() {
   if (pointer !== null && stage.hasPointerCapture(pointer))
     stage.releasePointerCapture(pointer);
   pointer = null;
-  chargeStart = null;
+  aimKeys.clear();
+  keyboardAiming = false;
   flight = null;
   touchdown = 1;
   jets.visible = false;
@@ -500,7 +505,8 @@ stage.addEventListener("pointerdown", (event) => {
     (event.pointerType === "mouse" && event.button !== 0)
   )
     return;
-  chargeStart = null;
+  aimKeys.clear();
+  keyboardAiming = false;
   pointer = event.pointerId;
   dragStart.set(event.clientX, event.clientY);
   stage.setPointerCapture(pointer);
@@ -527,7 +533,8 @@ stage.addEventListener("pointerup", (event) => {
 });
 function cancelInput() {
   pointer = null;
-  chargeStart = null;
+  aimKeys.clear();
+  keyboardAiming = false;
   clearAim();
 }
 stage.addEventListener("pointercancel", cancelInput);
@@ -545,38 +552,39 @@ window.addEventListener("keydown", (event) => {
   if (event.target instanceof Element && event.target.closest("button, a"))
     return;
   if (flight || won || pointer !== null) return;
-  const directions: Record<string, [number, number]> = {
-    ArrowUp: [0, -1],
-    ArrowDown: [0, 1],
-    ArrowLeft: [-1, 0],
-    ArrowRight: [1, 0],
-  };
-  if (event.key in directions) {
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(event.key.toLowerCase())) {
     event.preventDefault();
-    const [x, y] = directions[event.key];
-    const rect = stage.getBoundingClientRect();
-    keyboardDirection
-      .copy(
-        worldAt(
-          rect.left + rect.width / 2 + x * 50,
-          rect.top + rect.height / 2 + y * 50,
-        ).sub(worldAt(rect.left + rect.width / 2, rect.top + rect.height / 2)),
-      )
-      .normalize();
-    showAim(keyboardDirection.clone().multiplyScalar(3));
+    if (!keyboardAiming) {
+      if (!aim.visible) landing.copy(position);
+      keyboardAiming = true;
+    }
+    aimKeys.add(event.key.toLowerCase());
   }
   if (event.code === "Space") {
     event.preventDefault();
-    if (chargeStart === null) chargeStart = performance.now();
+    if (!event.repeat && keyboardAiming) launch();
   }
 });
 window.addEventListener("keyup", (event) => {
-  if (event.code === "Space" && chargeStart !== null) {
-    event.preventDefault();
-    chargeStart = null;
-    launch();
-  }
+  aimKeys.delete(event.key.toLowerCase());
 });
+stage.addEventListener("focusout", cancelInput);
+function updateKeyboardAim(dt: number) {
+  if (!keyboardAiming || flight || won || pointer !== null || !aimKeys.size) return;
+  const x = Number(aimKeys.has("arrowright") || aimKeys.has("d")) -
+    Number(aimKeys.has("arrowleft") || aimKeys.has("a"));
+  const y = Number(aimKeys.has("arrowdown") || aimKeys.has("s")) -
+    Number(aimKeys.has("arrowup") || aimKeys.has("w"));
+  if (!x && !y) return;
+  const rect = stage.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const movement = worldAt(centerX + x * 50, centerY + y * 50)
+    .sub(worldAt(centerX, centerY))
+    .normalize()
+    .multiplyScalar(dt * 6);
+  showAim(landing.clone().sub(position).add(movement));
+}
 document.querySelector("#reset")!.addEventListener("click", () => {
   reset();
   stage.focus({ preventScroll: true });
@@ -670,12 +678,7 @@ let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
-  if (chargeStart !== null)
-    showAim(
-      keyboardDirection
-        .clone()
-        .multiplyScalar(Math.min(9, 1 + (now - chargeStart) / 170)),
-    );
+  updateKeyboardAim(dt);
   if (flight) {
     flight.time += dt;
     const anticipation = reducedMotion.matches ? 0 : 0.12;

@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Drag anywhere on the lot in the direction you want to jump. Drag farther for more power; the ring shows the landing point. Release to flip. On a keyboard, use arrows to aim, hold Space to charge, and release to jump. Press R or Retry to reset, including during a jump.
+Drag anywhere on the lot in the direction you want to jump. Drag farther for more power; the ring shows the landing point. Release to flip. On a keyboard, hold arrows or WASD to move the landing marker (combine direction keys for diagonals), then press Space to jump. Press R or Retry to reset, including during a jump.
 
 Cones count as insurance claims. Landing on a parked car or outside the lot returns the player to the previous position. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
 

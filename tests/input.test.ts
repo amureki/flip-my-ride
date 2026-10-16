@@ -8,9 +8,10 @@ import * as THREE from "three";
 // Run the real input handlers without creating a WebGL renderer.
 const source = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
 
-test("short drags do not promise a flip that release cannot launch", () => {
+function inputFixture() {
   const handlers = {};
-  const context = vm.createContext({ THREE, handlers });
+  const keys = {};
+  const context = vm.createContext({ THREE, handlers, keys, HTMLInputElement: class {}, Element: class {} });
   const fixture = `
   const position = new THREE.Vector3();
   const landing = position.clone();
@@ -24,15 +25,22 @@ test("short drags do not promise a flip that release cannot launch", () => {
   const flipsLabel = {}, reducedMotion = {matches: false};
   const shockwave = {material: {}}, pivot = {scale: new THREE.Vector3()}, stunt = {};
   function burst() {}
-  let pointer = null, chargeStart = null;
+  let pointer = null, keyboardAiming = false;
+  const aimKeys = new Set();
   const dragStart = new THREE.Vector2();
-  const stage = {addEventListener(name, fn) {handlers[name] = fn}, setPointerCapture() {}, releasePointerCapture() {}, focus() {}};
-  const window = {addEventListener() {}};
+  const stage = {addEventListener(name, fn) {handlers[name] = fn}, setPointerCapture() {}, releasePointerCapture() {}, focus() {}, getBoundingClientRect() {return {left: 0, top: 0, width: 800, height: 600}}};
+  const window = {addEventListener(name, fn) {keys[name] = fn}};
+  function reset() {position.set(0, 0, 0); landing.copy(position); flight = null; cancelInput()}
   function worldAt(x, y) {return new THREE.Vector3(x, 0, y)}
   `;
   const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset()'));
-  const events = source.slice(source.indexOf('stage.addEventListener("pointerdown"'), source.indexOf('window.addEventListener("keydown"'));
+  const events = source.slice(source.indexOf('stage.addEventListener("pointerdown"'), source.indexOf('document.querySelector("#reset")'));
   vm.runInContext(ts.transpile(fixture + functions + events), context);
+  return {handlers, keys, context};
+}
+
+test("short drags do not promise a flip that release cannot launch", () => {
+  const {handlers, context} = inputFixture();
   const event = {pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0, target: {closest() {return null}}};
   handlers.pointerdown(event);
   handlers.pointermove({...event, clientX: 0.1});
@@ -45,4 +53,53 @@ test("short drags do not promise a flip that release cannot launch", () => {
   handlers.pointermove({...event, clientX: 1});
   handlers.pointerup({...event, clientX: 1});
   assert.equal(vm.runInContext('!!flight', context), true, 'Normal drag must launch');
+});
+
+
+test("keyboard marker supports diagonals, persists on release, and Space launches once", () => {
+  const {keys, context} = inputFixture();
+  const key = (name, repeat = false) => ({key: name, code: name, repeat, preventDefault() {}});
+  keys.keydown(key('ArrowRight'));
+  keys.keydown(key('ArrowUp'));
+  vm.runInContext('updateKeyboardAim(0.5)', context);
+  assert.ok(vm.runInContext('landing.x > 0 && landing.z < 0', context));
+  assert.ok(Math.abs(vm.runInContext('landing.length()', context) - 3) < 1e-10);
+  keys.keyup(key('ArrowRight'));
+  keys.keyup(key('ArrowUp'));
+  const before = vm.runInContext('landing.toArray().join()', context);
+  vm.runInContext('updateKeyboardAim(0.5)', context);
+  assert.equal(vm.runInContext('landing.toArray().join()', context), before);
+  assert.equal(vm.runInContext('message.textContent', context), 'Press Space to flip.');
+  keys.keydown(key('Space'));
+  assert.equal(vm.runInContext('flight.to.toArray().join()', context), before);
+  keys.keydown(key('Space', true));
+  assert.equal(vm.runInContext('flips', context), 1);
+  keys.keydown(key('r'));
+  assert.equal(vm.runInContext('flight === null && !keyboardAiming && aimKeys.size === 0', context), true);
+});
+
+test("keyboard aim is capped and focus loss cancels held keys", () => {
+  const {keys, handlers, context} = inputFixture();
+  keys.keydown({key: 'ArrowRight', preventDefault() {}});
+  vm.runInContext('updateKeyboardAim(10)', context);
+  assert.equal(vm.runInContext('landing.length()', context), 9);
+  handlers.focusout();
+  assert.equal(vm.runInContext('aimKeys.size === 0 && !keyboardAiming && !aim.visible', context), true);
+});
+
+
+test("WASD and arrows combine without doubling speed or releasing another held key", () => {
+  const {keys, context} = inputFixture();
+  const key = (name) => ({key: name, preventDefault() {}});
+  keys.keydown(key('D'));
+  keys.keydown(key('ArrowRight'));
+  vm.runInContext('updateKeyboardAim(0.25)', context);
+  assert.equal(vm.runInContext('landing.x', context), 1.5);
+  keys.keyup(key('ArrowRight'));
+  keys.keydown(key('w'));
+  vm.runInContext('updateKeyboardAim(0.25)', context);
+  assert.ok(vm.runInContext('landing.x > 1.5 && landing.z < 0', context));
+  keys.keyup(key('d'));
+  keys.keyup(key('W'));
+  assert.equal(vm.runInContext('aimKeys.size', context), 0);
 });
