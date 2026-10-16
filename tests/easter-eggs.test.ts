@@ -77,14 +77,16 @@ test("discoveries deduplicate, queue, reset and restore without changing gamepla
 test("each curbside sign is reachable from a clear in-bounds landing away from the goal", () => {
   for (const level of levels) {
     assert.ok(level.sign[0] <= -9 && level.sign[0] >= -9.4, level.name);
-    const [x, z] = [-7.6, level.sign[1]];
-    assert.ok(Math.abs(x - level.sign[0]) < 2.1, level.name);
-    assert.ok(Math.abs(x) <= 7.7 && Math.abs(z) <= 5.7, level.name);
-    assert.ok(Math.hypot(x - level.start[0], z - level.start[1]) <= 9, level.name);
-    assert.ok(Math.hypot(x - level.target[0], z - level.target[1]) > 4, level.name);
-    for (const [cx, cz, model] of level.cars)
-      assert.equal(vehicleLandingHeight(model, x - cx, z - cz), 0, level.name);
-    for (const [cx, cz] of level.cones)
-      assert.ok(Math.abs(x - cx) >= 1.05 || Math.abs(z - cz) >= 1.6, level.name);
+    assert.ok(Math.abs(level.sign[1]) >= 2.5, `${level.name}: sign stays clear of the entrance`);
+    let reachable = false;
+    for (let x = -7.7; x <= 7.7; x += 0.2) for (let z = -5.7; z <= 5.7; z += 0.2) {
+      if (Math.abs(x - level.sign[0]) >= 2.1 || Math.abs(z - level.sign[1]) >= 1.7) continue;
+      if (Math.hypot(x - level.start[0], z - level.start[1]) > 9) continue;
+      if (Math.hypot(x - level.target[0], z - level.target[1]) <= 4) continue;
+      if (level.cars.some(([cx, cz, model]) => vehicleLandingHeight(model, x - cx, z - cz) > 0)) continue;
+      if (level.cones.some(([cx, cz]) => Math.abs(x - cx) < 1.05 && Math.abs(z - cz) < 1.6)) continue;
+      reachable = true;
+    }
+    assert.ok(reachable, `${level.name}: no clean landing can trigger the sign`);
   }
 });

@@ -48,7 +48,7 @@ export const levels: readonly Level[] = [
     hint: "One free space. Getting there without a claim is the hard part.",
     start: [-6.3, 0],
     target: [2.7, -4.9],
-    sign: [-9.15, 4.5],
+    sign: [-9.15, -2.5],
     signText: ["LOT", "FULL"],
     signReply: "Full of it.",
     cars: [
