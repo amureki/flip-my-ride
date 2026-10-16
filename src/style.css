@@ -99,7 +99,14 @@ kbd {
   pointer-events: none;
 }
 #message {
-  min-height: 20px;
+  min-height: 2.8em;
+  max-width: 42ch;
+  margin-inline: auto;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  line-height: 1.4;
+  text-wrap: balance;
   font-weight: 700;
 }
 .instructions p {
@@ -124,17 +131,6 @@ kbd {
   height: 100%;
   width: 0;
   background: #20252c;
-}
-#stunt {
-  position: absolute;
-  top: 18%;
-  left: 16px;
-  right: 16px;
-  text-align: center;
-  font-size: clamp(15px, 2.5vw, 26px);
-  font-weight: 800;
-  font-style: italic;
-  pointer-events: none;
 }
 #result {
   position: absolute;
@@ -218,9 +214,6 @@ h2 {
   }
   #message {
     font-size: 12px;
-  }
-  #stunt {
-    top: 22%;
   }
 }
 

@@ -26,7 +26,7 @@ The orthographic camera fits the whole lot on desktop and mobile. Pointer draggi
 
 A short crouch precedes takeoff. Strong jumps perform two rolls. Higher arcs, air jets, a landing bounce, and an expanding dust ring provide the comedy. Side jets switch from one side to the other halfway through each jump. Each active outlet has a dense vapor core with a short opening burst. Exhaust uses only soft sprites, with uneven overlapping lobes and broad drifting trails; there are no solid cone jets. White trail puffs vary in size, speed, and lifetime, then expand and fade softly in world space using a fixed pool of 160 particles. The vapor adds no visible hardware to the body. Retry clears the vapor, and reduced-motion mode disables it. Landing remains deterministic. The counter counts rolls. Reduced-motion mode retains a low jump arc and disables rolls, jets, bounce, and shockwave.
 
-Text feedback uses a live region. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. No camera shake or added controls.
+A single bottom feedback area shows the instruction, then one launch joke, then the landing outcome. It reserves two lines to keep controls steady and uses an atomic live region. Control hints remain in a separate quieter line; no floating caption covers the scene. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. No camera shake or added controls.
 
 ## Sharing
 

@@ -201,7 +201,6 @@ car.traverse((object) => {
 environment.dispose();
 pmrem.dispose();
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-const stunt = document.querySelector<HTMLElement>("#stunt")!;
 let touchdown = 1;
 const shockwave = new THREE.Mesh(
   new THREE.RingGeometry(0.85, 1, 48),
@@ -391,13 +390,6 @@ function launch() {
   touchdown = 1;
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
-  stunt.textContent =
-    distance >= 8.9
-      ? "CLEARED FOR PARKING."
-      : distance > 5.5
-        ? "DOUBLE FLIP. SINGLE PARKING SPACE."
-        : "NORMAL CAR BEHAVIOR.";
-  stunt.hidden = false;
   burst(position, reducedMotion.matches ? 6 : 22);
   message.textContent =
     distance >= 8.9
@@ -416,7 +408,6 @@ function reset() {
   touchdown = 1;
   jets.visible = false;
   sideJets.visible = false;
-  stunt.hidden = true;
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
   const level = levels[levelIndex];
@@ -516,12 +507,6 @@ function finishFlight() {
   jets.visible = false;
   sideJets.visible = false;
   shockwave.position.copy(position).y = 0.05;
-  stunt.textContent =
-    hits > previousHits
-      ? "CLAIM FILED."
-      : clearedCar
-        ? "WHAT A PARK!"
-        : "LANDING: MOSTLY INTENTIONAL.";
   if (hits === previousHits)
     message.textContent = clearedCar
       ? "Traffic avoided. Parking still required."
@@ -801,7 +786,6 @@ renderer.setAnimationLoop((now: number) => {
     if (touchdown === 1) {
       pivot.rotation.set(0, 0, 0);
       pivot.scale.set(1, 1, 1);
-      stunt.hidden = true;
     }
   }
 

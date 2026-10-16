@@ -67,7 +67,6 @@
         role="application"
         aria-label="Parking game. Drag in a direction and release to flip. Hold arrows or WASD to move the landing marker, combine direction keys for diagonals, and press Space to flip. R to retry."
       >
-        <div id="stunt" hidden aria-hidden="true"></div>
         <div id="result" hidden>
           <h2 id="result-title">Parked.</h2>
           <p id="result-detail"></p>
@@ -277,7 +276,7 @@
         />
       </div>
       <div class="instructions">
-        <div id="message" role="status" aria-live="polite">
+        <div id="message" role="status" aria-live="polite" aria-atomic="true">
           Drag to aim. Release to flip. Land in green.
         </div>
         <div class="power" aria-hidden="true"><i id="power-fill"></i></div>
