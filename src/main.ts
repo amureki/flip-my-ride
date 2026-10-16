@@ -277,9 +277,9 @@ const carDamage = parkedVehicles.map(({ root, model }) => {
   const { roof } = vehicleShapes[model];
   return makeDamage(root, "car", roof.height, roof.z);
 });
-const { car, jets, sideJets, exhausts, suspension } = makeRoadster();
+const { car, jets, sideJets, exhausts, suspension, brakeLight } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
-const contactShadow = makeContactShadow(scene);
+const contactShadow = makeContactShadow(scene, parkedCars);
 const environment = new RoomEnvironment();
 const pmrem = new THREE.PMREMGenerator(renderer);
 const reflections = pmrem.fromScene(environment, 0.04);
@@ -1086,7 +1086,8 @@ renderer.setAnimationLoop((now: number) => {
     position.y = obstacleHeight(position.x, position.z);
     pivot.position.y = position.y + 0.5;
   }
-  contactShadow.update(pivot);
+  brakeLight.emissiveIntensity = !flight && touchdown < 1 ? 0.55 + 0.65 * (1 - touchdown) : 0.35;
+  contactShadow.update(pivot, obstacleHeight(pivot.position.x, pivot.position.z));
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
 

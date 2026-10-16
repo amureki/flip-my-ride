@@ -34,13 +34,13 @@ export function makeRoadster() {
   const wheels = new Set<THREE.Object3D>();
   car.scale.x = 0.88;
   const paint = new THREE.MeshPhysicalMaterial({
-    color: 0xf0f1f3, roughness: 0.3, metalness: 0.2,
-    clearcoat: 0.65, clearcoatRoughness: 0.22,
+    color: 0xf0f1f3, roughness: 0.34, metalness: 0.16,
+    clearcoat: 0.55, clearcoatRoughness: 0.3,
   });
   const black = new THREE.MeshStandardMaterial({ color: 0x11151a, roughness: 0.52 });
   const glass = new THREE.MeshPhysicalMaterial({
-    color: 0x302b27, roughness: 0.23, metalness: 0.35,
-    clearcoat: 0.8, clearcoatRoughness: 0.17,
+    color: 0x302b27, roughness: 0.3, metalness: 0.22,
+    clearcoat: 0.65, clearcoatRoughness: 0.28,
   });
   const silver = new THREE.MeshStandardMaterial({ color: 0xb3b9c0, metalness: 0.8, roughness: 0.3 });
   const rubber = new THREE.MeshStandardMaterial({ color: 0x16191d, roughness: 0.95 });
@@ -121,12 +121,13 @@ export function makeRoadster() {
   // Lowered active spoiler follows the deck instead of standing on exposed supports.
   addBox([1.48, 0.025, 0.13], [0, 0.665, 1.245], paint);
   addBox([1.46, 0.012, 0.025], [0, 0.668, 1.309], black);
+  const brakeLight = new THREE.MeshStandardMaterial({ color: 0x9c1626, emissive: 0xff1734, emissiveIntensity: 0.35, roughness: 0.35 });
   for (const [z, y, width, color] of [
     [-1.347, 0.435, 1.27, 0xeaf5ff], [1.351, 0.604, 1.42, 0xff1734],
   ]) {
     const light = new THREE.Mesh(
       new THREE.BoxGeometry(width, 0.018, 0.012),
-      new THREE.MeshBasicMaterial({ color }),
+      z > 0 ? brakeLight : new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.3 }),
     );
     light.position.set(0, y, z);
     car.add(light);
@@ -205,5 +206,5 @@ export function makeRoadster() {
   for (const part of [...car.children])
     if (!wheels.has(part)) suspension.add(part);
   car.add(suspension);
-  return { car, jets, sideJets, exhausts, suspension };
+  return { car, jets, sideJets, exhausts, suspension, brakeLight };
 }
