@@ -23,9 +23,9 @@ export default defineConfig(({ mode }) => {
           { tag: "link", attrs: { rel: "canonical", href: site.href }, injectTo: "head" as const },
           ...[
             ["og:url", site.href],
-            ["og:image", new URL("og-image.png?v=2", site).href],
+            ["og:image", new URL("og-image.png?v=4", site).href],
           ].map(([property, content]) => ({ tag: "meta", attrs: { property, content }, injectTo: "head-prepend" as const })),
-          { tag: "meta", attrs: { name: "twitter:image", content: new URL("og-image.png?v=2", site).href }, injectTo: "head" as const },
+          { tag: "meta", attrs: { name: "twitter:image", content: new URL("og-image.png?v=4", site).href }, injectTo: "head" as const },
         ];
       },
       generateBundle() {
