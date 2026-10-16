@@ -30,6 +30,8 @@ function loft(rings: number[][][], material: THREE.Material) {
 
 export function makeRoadster() {
   const car = new THREE.Group();
+  const suspension = new THREE.Group();
+  const wheels = new Set<THREE.Object3D>();
   car.scale.x = 0.88;
   const paint = new THREE.MeshPhysicalMaterial({
     color: 0xf0f1f3, roughness: 0.3, metalness: 0.2,
@@ -161,6 +163,7 @@ export function makeRoadster() {
       tire.position.set(side * 0.69, 0.31, z);
       tire.castShadow = tire.receiveShadow = true;
       car.add(tire);
+      wheels.add(tire);
       const wheel = new THREE.Group();
       wheel.position.set(side * 0.783, 0.31, z);
       wheel.rotation.y = side * Math.PI / 2;
@@ -173,6 +176,7 @@ export function makeRoadster() {
       hub.position.z = 0.012;
       wheel.add(barrel, lip, spokes, hub);
       car.add(wheel);
+      wheels.add(wheel);
     }
   const jets = new THREE.Group();
   const exhausts: THREE.Object3D[] = [];
@@ -198,5 +202,8 @@ export function makeRoadster() {
     }
   sideJets.visible = jets.visible = false;
   car.add(sideJets, jets);
-  return { car, jets, sideJets, exhausts };
+  for (const part of [...car.children])
+    if (!wheels.has(part)) suspension.add(part);
+  car.add(suspension);
+  return { car, jets, sideJets, exhausts, suspension };
 }

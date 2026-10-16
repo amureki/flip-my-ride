@@ -24,6 +24,7 @@ function inputFixture() {
   let won = false, flight = null, flips = 0, touchdown = 1;
   const trolleyTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};
+  const suspension = {position: new THREE.Vector3()};
   const shockwave = {material: {}}, pivot = {scale: new THREE.Vector3()}, stunt = {};
   function burst() {}
   let pointer = null, keyboardAiming = false;

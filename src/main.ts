@@ -226,7 +226,7 @@ for (
   scene.add(parked);
   parkedCars.push(parked);
 }
-const { car, jets, sideJets, exhausts } = makeRoadster();
+const { car, jets, sideJets, exhausts, suspension } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
 const contactShadow = makeContactShadow(scene);
 const environment = new RoomEnvironment();
@@ -242,6 +242,7 @@ environment.dispose();
 pmrem.dispose();
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 let touchdown = 1;
+let landingStrength = 0;
 const shockwave = new THREE.Mesh(
   new THREE.RingGeometry(0.85, 1, 48),
   new THREE.MeshBasicMaterial({
@@ -318,26 +319,30 @@ const aimLine = new THREE.Line(
 );
 scene.add(aimLine);
 aimLine.visible = false;
-const particles: { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number }[] =
+const particles: { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number; size: number; opacity: number }[] =
   [];
 const puffGeo = new THREE.IcosahedronGeometry(0.16, 0);
-function burst(position: THREE.Vector3, count = 14) {
+function burst(position: THREE.Vector3, count = 14, strength = 1) {
   for (let i = 0; i < count; i++) {
     const mesh = new THREE.Mesh(
       puffGeo,
-      new THREE.MeshBasicMaterial({ color: 0xf4f1dc, transparent: true }),
+      new THREE.MeshBasicMaterial({ color: 0xd9d7cf, transparent: true, depthWrite: false }),
     );
     mesh.position.copy(position);
-    mesh.position.y = 0.3;
+    mesh.position.x += (i % 2 ? 1 : -1) * 0.61;
+    mesh.position.z += (i % 4 < 2 ? 1 : -1) * 0.85;
+    mesh.position.y = 0.12;
     scene.add(mesh);
     particles.push({
       mesh,
       velocity: new THREE.Vector3(
-        (Math.random() - 0.5) * 3,
-        Math.random() * 2,
-        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 2.4 * strength,
+        Math.random() * 0.7 * strength,
+        (Math.random() - 0.5) * 2.4 * strength,
       ),
       life: 1,
+      size: 0.35 + strength * 0.4,
+      opacity: 0.2 + strength * 0.25,
     });
   }
 }
@@ -430,6 +435,7 @@ function launch() {
     heading: Math.atan2(-(landing.x - position.x), -(landing.z - position.z)),
   };
   touchdown = 1;
+  suspension.position.y = 0;
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
   burst(position, reducedMotion.matches ? 6 : 22);
@@ -448,6 +454,7 @@ function reset() {
   keyboardAiming = false;
   flight = null;
   touchdown = 1;
+  suspension.position.y = 0;
   jets.visible = false;
   sideJets.visible = false;
   shockwave.material.opacity = 0;
@@ -506,6 +513,7 @@ function reset() {
 }
 function finishFlight() {
   if (!flight) return;
+  landingStrength = THREE.MathUtils.clamp(flight.from.distanceTo(flight.to) / 9, 0, 1);
   position.copy(flight.to);
   const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
@@ -557,7 +565,8 @@ function finishFlight() {
     message.textContent = clearedCar
       ? "Traffic avoided. Parking still required."
       : "Landed. The sign still says no.";
-  burst(position, reducedMotion.matches ? 6 : 26);
+  burst(position, reducedMotion.matches ? 4 : Math.round(8 + landingStrength * 10),
+    reducedMotion.matches ? 0.25 : 0.35 + landingStrength * 0.5);
   // Require the complete upright car footprint to fit inside the parking bay.
   if (
     Math.abs(position.x - target.x) <= 0.51 &&
@@ -826,31 +835,26 @@ renderer.setAnimationLoop((now: number) => {
     });
     if (t === 1) finishFlight();
   } else if (touchdown < 1) {
-    touchdown = Math.min(1, touchdown + dt * 1.8);
-    const bounce = reducedMotion.matches
-      ? 0
-      : Math.sin(touchdown * Math.PI * 3) * (1 - touchdown);
-    pivot.position.y = 0.5 + Math.abs(bounce) * 0.32;
-    pivot.rotation.z = bounce * 0.12;
-    pivot.scale.set(1 + bounce * 0.12, 1 - bounce * 0.22, 1 + bounce * 0.06);
-    shockwave.scale.setScalar(1 + touchdown * 3.5);
+    touchdown = Math.min(1, touchdown + dt / (0.3 + landingStrength * 0.15));
+    const compression = touchdown < 0.28
+      ? Math.sin(touchdown / 0.28 * Math.PI) * (0.008 + landingStrength * 0.016)
+      : -Math.sin((touchdown - 0.28) / 0.72 * Math.PI) * (1 - touchdown) * (0.008 + landingStrength * 0.012);
+    suspension.position.y = reducedMotion.matches ? 0 : -compression;
+    shockwave.scale.setScalar(1 + touchdown * (0.5 + landingStrength * 1.1));
     shockwave.material.opacity = reducedMotion.matches
       ? 0
-      : (1 - touchdown) * 0.45;
-    if (touchdown === 1) {
-      pivot.rotation.set(0, 0, 0);
-      pivot.scale.set(1, 1, 1);
-    }
+      : (1 - touchdown) ** 2 * (0.06 + landingStrength * 0.1);
+    if (touchdown === 1) suspension.position.y = 0;
   }
 
   for (let i = particles.length - 1; i >= 0; i--) {
     const particle = particles[i];
     particle.life -= dt * 1.5;
     particle.mesh.position.addScaledVector(particle.velocity, dt);
-    particle.mesh.scale.setScalar(1 + (1 - particle.life) * 2);
+    particle.mesh.scale.setScalar(particle.size * (1 + (1 - particle.life) * 2));
     (particle.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(
       0,
-      particle.life * 0.65,
+      particle.life * particle.opacity,
     );
     if (particle.life <= 0) {
       scene.remove(particle.mesh);
