@@ -1,7 +1,7 @@
 import { trackEvent } from "./analytics";
 import * as THREE from "three";
-import { makeDamage } from "./damage";
 import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
+import { makeDamage } from "./damage";
 import { makeAsphalt } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { makeContactShadow } from "./contact-shadow";
@@ -11,6 +11,14 @@ import { levels } from "./levels";
 import { makeTrolley, hitsTrolley } from "./trolley";
 import { runTotal, licenceVerdict, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
+type ReplayMove = {
+  time: number;
+  x: number;
+  z: number;
+  trolleyTime: number;
+  duration: number;
+  anticipation: number;
+};
 const shareButtons = document.querySelectorAll<HTMLButtonElement>(
   "[data-native-share]",
 );
@@ -18,6 +26,18 @@ const shareStatus = document.querySelector<HTMLElement>("#share-status")!;
 const shareLink = document.querySelector<HTMLInputElement>("#share-link")!;
 let shareVersion = 0;
 let sharing = false;
+const replayPanel = document.querySelector<HTMLElement>("#replay-panel")!;
+const watchReplay = document.querySelector<HTMLButtonElement>("#watch-replay")!;
+const stopReplay = document.querySelector<HTMLButtonElement>("#stop-replay")!;
+let moves: ReplayMove[] = [];
+let roundTime = 0;
+type ReplaySession = {
+  moves: ReplayMove[];
+  index: number;
+  endHold: number;
+  completed: { carDamage: boolean[]; trolleyDamage: boolean; trolleyPosition: THREE.Vector3; trolleyRotation: THREE.Euler; trolleyTime: number; position: THREE.Vector3; flips: number; hits: number; message: string; cones: { position: THREE.Vector3; rotation: THREE.Euler; hit: boolean }[] };
+};
+let replay: ReplaySession | null = null;
 
 const stage = document.querySelector<HTMLDivElement>("#stage")!;
 const thumbPad = document.querySelector<HTMLDivElement>("#thumb-pad")!;
@@ -349,6 +369,7 @@ let flight: {
   to: THREE.Vector3;
   time: number;
   duration: number;
+  anticipation: number;
   height: number;
   heading: number;
   rolls: number;
@@ -423,13 +444,13 @@ function clearAim() {
   aimLine.visible = false;
   powerFill.style.width = "0";
 }
-function launch() {
+function launch(replayMove?: ReplayMove) {
   aimKeys.clear();
   keyboardAiming = false;
   const distance = position.distanceTo(landing);
   clearAim();
   if (distance < 0.3 || won || flight) return;
-  if (!attemptStarted) {
+  if (!replay && !attemptStarted) {
     attemptStarted = true;
     attempt++;
     attemptSeconds = 0;
@@ -445,13 +466,15 @@ function launch() {
     from: position.clone(),
     to: landing.clone(),
     time: 0,
-    duration: reducedMotion.matches ? 0.8 : 1.15 + distance * 0.075,
+    duration: replayMove?.duration ?? (reducedMotion.matches ? 0.8 : 1.15 + distance * 0.075),
+    anticipation: replayMove?.anticipation ?? (reducedMotion.matches ? 0 : 0.12),
     height: reducedMotion.matches ? 1 : 2.6 + distance * 0.38,
     rolls: distance > 5.5 ? 2 : 1,
     clearedCar: false,
     trolleyTime,
     heading: Math.atan2(-(landing.x - position.x), -(landing.z - position.z)),
   };
+  if (!replay) moves.push({ time: roundTime, x: landing.x, z: landing.z, trolleyTime, duration: flight.duration, anticipation: flight.anticipation });
   touchdown = 1;
   suspension.position.y = 0;
   shockwave.material.opacity = 0;
@@ -464,10 +487,12 @@ function launch() {
         ? "Two flips. The sign said zero."
         : "The sign is more of a suggestion.";
 }
-function reset(reason: "retry" | "next" | "initial" = "retry") {
+function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   if (reason === "retry" && attemptStarted) levelEvent("level_retried", { completed: won });
-  attemptStarted = false;
+  if (reason !== "replay") attemptStarted = false;
   if (reason === "next") attempt = 0;
+  roundTime = 0;
+  moves = [];
   cancelInput();
   aimKeys.clear();
   keyboardAiming = false;
@@ -483,7 +508,7 @@ function reset(reason: "retry" | "next" | "initial" = "retry") {
   trolleyDamage.restore(false);
   carDamage.forEach((damage) => damage.restore(false));
   trolley.root.visible = !!level.trolley;
-  if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+  if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   start.set(level.start[0], 0, level.start[1]);
   target.set(level.target[0], 0, level.target[1]);
   parkingBay.position.copy(target);
@@ -540,8 +565,8 @@ function finishFlight() {
   const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
-  const impactTime = flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12);
-  const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12), levels[levelIndex].trolley!);
+  const impactTime = flight.trolleyTime + flight.duration + flight.anticipation;
+  const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + flight.anticipation, levels[levelIndex].trolley!);
   flight = null;
   pivot.rotation.set(0, 0, 0);
   if (
@@ -598,6 +623,7 @@ function finishFlight() {
     Math.abs(position.z - target.z) <= 0.68
   ) {
     won = true;
+    if (replay) return;
     roundScores[levelIndex] = {
       flips, hits,
       cars: carDamage.filter((damage, index) => parkedCars[index].visible && damage.damaged).length,
@@ -640,6 +666,7 @@ for (const surface of [stage, thumbPad]) {
     if (
       (event.target as HTMLElement).closest("button, input") ||
       (surface === stage && mobileControls.matches && event.pointerType !== "mouse") ||
+      replay ||
       flight ||
       won ||
       pointer !== null ||
@@ -710,6 +737,10 @@ mobileControls.addEventListener("change", cancelInput);
 window.addEventListener("resize", cancelInput);
 window.addEventListener("blur", cancelInput);
 window.addEventListener("keydown", (event) => {
+  if (replay) {
+    if (event.key === "Escape") endReplay();
+    return;
+  }
   if (event.target instanceof HTMLInputElement) return;
   if (event.key.toLowerCase() === "r") {
     reset();
@@ -771,12 +802,16 @@ nextButton.addEventListener("click", () => {
   reset("next");
   stage.focus({ preventScroll: true });
 });
+function currentShareContent() {
+  const score = !won ? undefined
+    : levelIndex === levels.length - 1
+      ? { ...runTotal(roundScores), completedLots: levels.length }
+      : { flips, hits, lot: levels[levelIndex].name };
+  return shareContent(location.href, score);
+}
 function updateShareLinks() {
   shareVersion++;
-  const content = shareContent(
-    location.href,
-    won ? (levelIndex === levels.length - 1 ? { ...runTotal(roundScores), completedLots: levels.length } : { flips, hits, lot: levels[levelIndex].name }) : undefined,
-  );
+  const content = currentShareContent();
   const links = socialLinks(content);
   for (const link of document.querySelectorAll<HTMLAnchorElement>(
     "[data-social]",
@@ -822,12 +857,7 @@ for (const button of shareButtons)
       button.disabled = true;
     });
     try {
-      await navigator.share(
-        shareContent(
-          location.href,
-          won ? (levelIndex === levels.length - 1 ? { ...runTotal(roundScores), completedLots: levels.length } : { flips, hits, lot: levels[levelIndex].name }) : undefined,
-        ),
-      );
+      await navigator.share(currentShareContent());
       levelEvent("share_result", { method: "native", outcome: "resolved" });
     } catch (error) {
       levelEvent("share_result", { method: "native", outcome: error instanceof DOMException && error.name === "AbortError" ? "cancelled" : "failed" });
@@ -843,6 +873,62 @@ for (const button of shareButtons)
       });
     }
   });
+function endReplay() {
+  if (!replay) return;
+  const current = replay;
+  replay = null;
+  reset("replay");
+  moves = current.moves;
+  trolleyTime = current.completed.trolleyTime;
+  if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+  carDamage.forEach((damage, index) => damage.restore(current.completed.carDamage[index]));
+  trolleyDamage.restore(current.completed.trolleyDamage);
+  trolley.root.position.copy(current.completed.trolleyPosition);
+  trolley.root.rotation.copy(current.completed.trolleyRotation);
+  position.copy(current.completed.position);
+  pivot.position.copy(position).y = 0.5;
+  flips = current.completed.flips;
+  hits = current.completed.hits;
+  won = true;
+  flipsLabel.textContent = String(flips);
+  message.textContent = current.completed.message;
+  cones.forEach((cone, index) => {
+    cone.mesh.position.copy(current.completed.cones[index].position);
+    cone.mesh.rotation.copy(current.completed.cones[index].rotation);
+    cone.hit = current.completed.cones[index].hit;
+    cone.mesh.scale.set(cone.hit ? 1.3 : 1, cone.hit ? 0.12 : 1, cone.hit ? 1.3 : 1);
+  });
+  result.hidden = false;
+  replayPanel.hidden = true;
+  document.querySelector("#app")!.classList.remove("replaying");
+  for (const child of document.querySelector("#app")!.children)
+    if (child instanceof HTMLElement) child.inert = false;
+  updateShareLinks();
+  watchReplay.focus({ preventScroll: true });
+}
+
+function beginReplay() {
+  if (!won || replay || !moves.length) return;
+  const current: ReplaySession = {
+    moves: moves.slice(), index: 0, endHold: 0,
+    completed: { carDamage: carDamage.map((damage) => damage.damaged), trolleyDamage: trolleyDamage.damaged, trolleyPosition: trolley.root.position.clone(), trolleyRotation: trolley.root.rotation.clone(), trolleyTime, position: position.clone(), flips, hits, message: message.textContent ?? "",
+      cones: cones.map((cone) => ({ position: cone.mesh.position.clone(), rotation: cone.mesh.rotation.clone(), hit: cone.hit })) },
+  };
+  levelEvent("replay_started");
+  reset("replay");
+  replay = current;
+  replayPanel.hidden = false;
+  document.querySelector("#app")!.classList.add("replaying");
+  for (const child of document.querySelector("#app")!.children)
+    if (child instanceof HTMLElement && child !== replayPanel) child.inert = true;
+  stopReplay.focus({ preventScroll: true });
+}
+watchReplay.addEventListener("click", beginReplay);
+stopReplay.addEventListener("click", () => endReplay());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && replay) endReplay();
+});
+
 function resize() {
   const { width, height } = stage.getBoundingClientRect();
   const aspect = width / height;
@@ -864,22 +950,34 @@ let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
-  if (attemptStarted && !won && !document.hidden) attemptSeconds += dt;
+  if (!won) roundTime += dt;
+  if (attemptStarted && !won && !replay && !document.hidden) attemptSeconds += dt;
   updateKeyboardAim(dt);
   if (aim.visible && !flight && !won) updateAimFeedback();
   if (trolley.root.visible && !won && !trolleyDamage.damaged) {
     trolleyTime += dt;
     if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   }
+  if (replay && !flight) {
+    if (replay.index < replay.moves.length && roundTime >= replay.moves[replay.index].time) {
+      const move = replay.moves[replay.index++];
+      landing.set(move.x, 0, move.z);
+      trolleyTime = move.trolleyTime;
+      if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+      launch(move);
+    } else if (replay.index === replay.moves.length && (replay.endHold += dt) >= 2) {
+      endReplay();
+    }
+  }
   if (flight) {
     flight.time += dt;
-    const anticipation = reducedMotion.matches ? 0 : 0.12;
+    const anticipation = flight.anticipation;
     const t = THREE.MathUtils.clamp(
       (flight.time - anticipation) / flight.duration,
       0,
       1,
     );
-    const windup = anticipation ? Math.min(flight.time / anticipation, 1) : 1;
+    const windup = !reducedMotion.matches && anticipation ? Math.min(flight.time / anticipation, 1) : 1;
     pivot.scale.set(
       1 + Math.sin(windup * Math.PI) * 0.1,
       1 - Math.sin(windup * Math.PI) * 0.2,
@@ -945,6 +1043,7 @@ renderer.setAnimationLoop((now: number) => {
   contactShadow.update(pivot);
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
+
 });
 
 for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-social]")) {
@@ -955,5 +1054,5 @@ for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-social]")
   }));
 }
 window.addEventListener("pagehide", () => {
-  if (attemptStarted && !won) levelEvent("level_exit");
+  if (attemptStarted && !won && !replay) levelEvent("level_exit");
 });

@@ -168,6 +168,9 @@
               </svg>
             </button>
           </div>
+          <div class="replay-actions">
+            <button id="watch-replay" class="secondary">Watch replay</button>
+          </div>
           <div class="result-actions">
             <button id="next-lot">Next lot</button
             ><button id="again" class="secondary">Retry <kbd>R</kbd></button>
@@ -179,6 +182,12 @@
           <p>Try a browser with WebGL enabled.</p>
         </div>
       </div>
+      <section id="replay-panel" aria-label="Lot replay" hidden>
+        <div class="replay-toolbar">
+          <p id="replay-status">Replay</p>
+          <button id="stop-replay">Back to score</button>
+        </div>
+      </section>
       <header>
         <h1>Flip My Ride</h1>
         <div class="score"><span id="flips">0</span> flips</div>

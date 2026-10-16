@@ -25,7 +25,9 @@ function inputFixture() {
   const parkedCars = [], carDamage = [], cones = [];
   const trolleyDamage = {damaged: false}, levels = [{}], levelIndex = 0;
   const aimSymbols = Array.from({length: 3}, () => ({visible: false, material: {color: new THREE.Color()}}));
-  let won = false, flight = null, flips = 0, touchdown = 1;
+  let won = false, flight = null, flips = 0, touchdown = 1, replay = null;
+  const moves = [];
+  let roundTime = 0;
   let attemptStarted = false, attempt = 0, attemptSeconds = 0, gameStarted = false;
   function trackEvent() {}
   function levelEvent() {}
@@ -114,6 +116,26 @@ test("WASD and arrows combine without doubling speed or releasing another held k
   keys.keyup(key('d'));
   keys.keyup(key('W'));
   assert.equal(vm.runInContext('aimKeys.size', context), 0);
+});
+
+test("replay blocks player input and retry shortcuts", () => {
+  const {handlers, keys, context} = inputFixture();
+  vm.runInContext('replay = {}; position.set(2, 0, 1)', context);
+  keys.keydown({key: 'r', preventDefault() {}});
+  keys.keydown({key: 'ArrowRight', preventDefault() {}});
+  handlers.pointerdown({pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0, target: {closest() {return null}}});
+  assert.equal(vm.runInContext('position.x === 2 && pointer === null && aimKeys.size === 0', context), true);
+});
+
+test("replay preserves flight timing when reduced-motion preferences change", () => {
+  const {context} = inputFixture();
+  vm.runInContext('landing.set(3, 0, 0); launch();', context);
+  const duration = vm.runInContext('flight.duration', context);
+  const anticipation = vm.runInContext('flight.anticipation', context);
+  vm.runInContext('flight = null; replay = {}; reducedMotion.matches = true; launch(moves[0]);', context);
+  assert.equal(vm.runInContext('flight.duration', context), duration);
+  assert.equal(vm.runInContext('flight.anticipation', context), anticipation);
+  assert.equal(vm.runInContext('moves.length', context), 1);
 });
 
  test("landing marker distinguishes clear, collision-risk, damaged, and outside destinations", () => {

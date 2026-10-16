@@ -26,13 +26,15 @@ The orthographic camera fits the whole lot on desktop and mobile. Desktop pointe
 
 A short crouch precedes takeoff. Strong jumps perform two rolls. Higher arcs and air jets provide the comedy. Landing strength follows jump distance: 8–18 small dust puffs spread from the tire positions, with a faint expanding ring. The body compresses by at most 0.024 world units and rebounds once over 0.3–0.45 seconds; wheels stay planted and the body is not stretched. Reduced motion uses four small dust puffs without suspension movement or a ring. Side jets switch from one side to the other halfway through each jump. Each active outlet has a dense vapor core with a short opening burst. Exhaust uses only soft sprites, with uneven overlapping lobes and broad drifting trails; there are no solid cone jets. White trail puffs vary in size, speed, and lifetime, then expand and fade softly in world space using a fixed pool of 160 particles. The vapor adds no visible hardware to the body. Retry clears the vapor, and reduced-motion mode disables it. Landing remains deterministic. The counter counts rolls. Reduced-motion mode retains a low jump arc and disables rolls, jets, bounce, and shockwave.
 
-A single bottom feedback area shows the instruction, then one launch joke, then the landing outcome. It reserves two lines to keep controls steady and uses an atomic live region. Control hints remain in a separate quieter line; no floating caption covers the scene. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. No camera shake or added controls.
+A single bottom feedback area shows the instruction, then one launch joke, then the landing outcome. It reserves two lines to keep controls steady and uses an atomic live region. Control hints remain in a separate quieter line; no floating caption covers the scene. Replay captions use the same feedback text. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. No camera shake.
 
 ## Sharing
 
-Direct X, WhatsApp, Telegram, and native share actions are visible at the top from the first screen and in the result. No intermediate Share button, menu, challenge-link control, or download control. Before completion, share text describes the game; after completion it includes the score. The native action falls back to copying the URL.
+Direct X, WhatsApp, Telegram, and native share actions are visible at the top from the first screen and in the result. No intermediate Share button, menu, or challenge-link control. Watch replay appears only in the completed result. Before completion, share text describes the game; after completion it includes the score. The native action falls back to copying the URL.
 
 Sharing uses locally embedded Simple Icons SVG marks for X, WhatsApp, and Telegram, plus an outlined native-share icon. All top actions occupy one compact row beside Retry. Accessible labels and hover titles name each destination. Retry always shows a bordered R key badge, including on mobile. Result sharing uses the same icon row.
+
+Watch replay uses a secondary button below the social sharing row. Playback keeps the normal gameplay canvas, camera scale, and responsive sizing. Failed landings and original pauses remain visible, and reduced-motion settings still apply. Back to score exits playback; the other controls are inactive until the completed result returns. There are no video export or download controls.
 
 ## Parking jokes
 
@@ -54,14 +56,14 @@ Unexpected Item introduces timing in the third lot. A wire shopping trolley with
 
 Asphalt uses a single seeded 1024-pixel texture with fine low-contrast grain, three faint paired tire marks, and lightly chipped parking lines. Surface detail is generated once and remains stable across retries and replays. The green target bay stays crisp. The texture uses mipmaps and bounded anisotropic filtering to limit shimmer at the game camera angle.
 
-## Scene consistency
-
-The lot base uses softly rounded edges and fine curb joints. Trees use tapered trunks and three compact faceted crown masses with restrained green variation. The target bay has a muted green fill with crisp pale borders and a clear P. A thin landing ring uses a check for clear ground, an amber exclamation for collision risk, and an orange cross outside the lot. Symbols remain visible over obstacles. Collision warnings include cars, cones, and the predicted trolley position. The warning updates while aiming, including when the trolley moves.
-
 ## Crush and continue
 
-Landing on parked cars or the trolley keeps the player at the landing point. Each newly crushed object adds one claim; overlapping objects each count once. Cars compress into broad wrecks with splayed wheels. The trolley flattens and stops at its exact impact position. Cones flatten in place. Damage remains through later jumps and the score screen, and resets on Retry or the next lot. Reduced motion applies the final damage immediately. Out-of-bounds landings still return to the previous position. Clean parking means finishing without claims; destruction never blocks completion.
+Landing on parked cars or the trolley keeps the player at the landing point. Each newly crushed object adds one claim; overlapping objects each count once. Cars compress into broad wrecks with splayed wheels. The trolley flattens and stops at its exact impact position. Cones flatten in place. Damage remains through later jumps and the score screen, and resets on Retry or the next lot. Replay rebuilds damage and restores the completed wrecks when exited. Reduced motion applies the final damage immediately. Out-of-bounds landings still return to the previous position. Clean parking means finishing without claims; destruction never blocks completion.
 
 Receipts retain a centered receipt heading and lot name, aligned flip and claim rows, a dashed divider, and parking-fee and repair-bill rows. One punchline reflects damage, with cars taking priority over trolleys and cones. A short thank-you footer completes the receipt. Itemized damage, stamps, and fine print are omitted to keep the score quick to read. Retry replaces the current lot’s score.
+
+## Scene consistency
+
+The lot base uses softly rounded edges and fine curb joints. Trees use tapered trunks and three compact faceted crown masses with restrained green variation. The target bay has a muted green fill with crisp pale borders and a clear P. A thin landing ring uses a check for clear ground, an amber exclamation for collision risk, and an orange cross outside the lot. Symbols remain visible over obstacles. Collision warnings include intact cars, cones, and the predicted trolley position; already crushed objects do not add warnings. The warning updates while aiming, including when the trolley moves.
 
 The result uses a compact score section and a separate action section. Aligned rows show flips, claims, the parking fee, and a repair-bill joke, followed by one outcome punchline and a short receipt footer. Actions retain 44px targets and never scroll with the receipt. Short landscape screens place actions beside the score; on other screens they sit below it. The score section alone scrolls under text enlargement. The result fits the dynamic viewport and hides gameplay hints while open.

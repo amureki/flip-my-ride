@@ -57,9 +57,10 @@ Events use [Umami's custom event API](https://docs.umami.is/docs/tracker-functio
 | `game_completed` | Final level cleared, once per run; includes totals for the saved level scores. |
 | `share_clicked` | Sharing control used; includes method, header/result placement, and completion state. |
 | `share_result` | Native share resolved/cancelled/failed, clipboard copied, or manual copy required. |
+| `replay_started` | Recorded attempt playback requested. |
 | `game_error` | WebGL initialization failed. |
 
-Level events include the level number/name, attempt number, flips, claims, and visible gameplay seconds since the attempt's first flip. Duration excludes hidden-tab time, waiting before the first flip. Game totals use saved scores, not discarded retries. Share results cannot confirm that a post was published or delivered; manual-copy fallback cannot confirm copying.
+Level events include the level number/name, attempt number, flips, claims, and visible gameplay seconds since the attempt's first flip. Duration excludes hidden-tab time, waiting before the first flip, and replay playback. Game totals use saved scores, not discarded retries. Playback does not emit starts or completions. Share results cannot confirm that a post was published or delivered; manual-copy fallback cannot confirm copying.
 
 Compare level starts and completions by level in Umami, then inspect retries, duration, and claims for difficult sections. Use sessions/funnels for player progression: raw counts include repeat attempts. Compare pageviews with game starts for visitors who never play, and completions with share clicks for sharing interest. Exit events can be lost when browsers close; do not treat missing exit events as continued play. These signals show behavior, not whether players enjoyed a level.
 
@@ -93,8 +94,15 @@ Strong launches perform two rolls. A short launch crouch, visible air jets, land
 
 X, WhatsApp, Telegram, and the native share action are visible at the top from the first screen, and again in the completed result. Social links open a composer with the game URL and, after a win, a short score boast. No account or API key is needed. Users choose the recipient and send the post themselves.
 
-The native action uses the device share sheet when available; otherwise it copies the game link, with manual selection if clipboard access fails. Cancelling native sharing does not copy anything. There are no score-bearing challenge URLs or download steps. Deploy to public HTTPS before sharing; localhost URLs only work on the same device.
+The native action uses the device share sheet when available; otherwise it copies the game link, with manual selection if clipboard access fails. Cancelling native sharing does not copy anything. There are no score-bearing challenge URLs or shared replay links. Deploy to public HTTPS before sharing; localhost URLs only work on the same device.
 
 Run local share URL and text checks with npm test.
 
-In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle.
+## Replays
+
+After each completed lot, Watch replay plays every jump since the latest Retry, including failed landings and crashes. Replays preserve the original jump timing, including pauses, with a two-second hold after the final landing. Watch replay keeps the normal gameplay size and camera, including when the window is resized. Replay uses the current reduced-motion preference.
+
+
+Back to score, Escape, or hiding the tab stops playback and restores the completed score. Players can use their own screen recorder while watching. There is no built-in video export.
+
+In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle. Replay preserves trolley timing at each launch.

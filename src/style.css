@@ -422,6 +422,54 @@ button:disabled {
   background: #39424d;
 }
 
+.replay-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.replay-actions button {
+  flex: 1;
+  padding: 10px 8px;
+}
+#replay-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #d5d8dc;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+}
+.replay-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+}
+.replay-toolbar p {
+  font-size: 12px;
+}
+.replay-toolbar button {
+  flex-shrink: 0;
+}
+.replaying > :not(#replay-panel) {
+  visibility: hidden;
+}
+.replaying > #stage,
+.replaying > .instructions {
+  visibility: visible;
+}
+.replaying #replay-panel {
+  background: transparent;
+  pointer-events: none;
+}
+.replaying .replay-toolbar {
+  pointer-events: auto;
+}
+
 #result #receipt-progress { margin: 0 0 12px; text-align: center; }
 .receipt .receipt-bill {
   margin-top: 12px;
@@ -445,7 +493,9 @@ button:disabled {
 #app:has(#result:not([hidden])) > .instructions {
   visibility: hidden;
 }
-
+#result .replay-actions .secondary {
+  margin-top: 0;
+}
 
 @media (max-height: 480px) and (min-width: 560px) {
   #result {
