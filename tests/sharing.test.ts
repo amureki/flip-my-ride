@@ -34,3 +34,8 @@ test("social composers receive encoded game URL and score text", () => {
   assert.equal(new URL(links.telegram).searchParams.get("text"), content.text);
   assert.equal(new URL(links.telegram).searchParams.get("url"), content.url);
 });
+
+test("completed score identifies the lot", () => {
+  const content = shareContent("https://example.com/", { flips: 1, hits: 0, lot: "One Spot Over" });
+  assert.match(content.text, /in One Spot Over/);
+});

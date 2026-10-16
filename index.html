@@ -74,11 +74,21 @@
           <section class="receipt" aria-label="Insurance receipt">
             <h3>Insurance receipt</h3>
             <dl>
-              <div><dt>Parking fee</dt><dd>€0</dd></div>
-              <div><dt>Claims</dt><dd id="receipt-claims">0</dd></div>
-              <div><dt>Insurance</dt><dd id="receipt-insurance">No claim</dd></div>
+              <div>
+                <dt>Parking fee</dt>
+                <dd>€0</dd>
+              </div>
+              <div>
+                <dt>Claims</dt>
+                <dd id="receipt-claims">0</dd>
+              </div>
+              <div>
+                <dt>Insurance</dt>
+                <dd id="receipt-insurance">No claim</dd>
+              </div>
             </dl>
           </section>
+          <p id="share-score-label" hidden>Share your score</p>
           <div
             class="social-options result-social"
             aria-label="Share your score"
@@ -89,7 +99,9 @@
               rel="noopener noreferrer"
               title="Share on X"
               aria-label="Share on X"
-              ><svg width="20" height="20"
+              ><svg
+                width="20"
+                height="20"
                 aria-hidden="true"
                 focusable="false"
                 role="img"
@@ -105,7 +117,9 @@
               rel="noopener noreferrer"
               title="Share on WhatsApp"
               aria-label="Share on WhatsApp"
-              ><svg width="20" height="20"
+              ><svg
+                width="20"
+                height="20"
                 aria-hidden="true"
                 focusable="false"
                 role="img"
@@ -121,7 +135,9 @@
               rel="noopener noreferrer"
               title="Share on Telegram"
               aria-label="Share on Telegram"
-              ><svg width="20" height="20"
+              ><svg
+                width="20"
+                height="20"
                 aria-hidden="true"
                 focusable="false"
                 role="img"
@@ -136,7 +152,9 @@
               aria-label="More sharing options"
               title="More sharing options"
             >
-              <svg width="20" height="20"
+              <svg
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
                 focusable="false"
@@ -152,7 +170,10 @@
               </svg>
             </button>
           </div>
-          <button id="again" class="secondary">Try again</button>
+          <div class="result-actions">
+            <button id="next-lot">Next lot</button
+            ><button id="again" class="secondary">Retry <kbd>R</kbd></button>
+          </div>
         </div>
         <div id="error" hidden>
           <h2>3D graphics are unavailable.</h2>
@@ -169,7 +190,9 @@
             rel="noopener noreferrer"
             title="Share on X"
             aria-label="Share on X"
-            ><svg width="20" height="20"
+            ><svg
+              width="20"
+              height="20"
               aria-hidden="true"
               focusable="false"
               role="img"
@@ -185,7 +208,9 @@
             rel="noopener noreferrer"
             title="Share on WhatsApp"
             aria-label="Share on WhatsApp"
-            ><svg width="20" height="20"
+            ><svg
+              width="20"
+              height="20"
               aria-hidden="true"
               focusable="false"
               role="img"
@@ -201,7 +226,9 @@
             rel="noopener noreferrer"
             title="Share on Telegram"
             aria-label="Share on Telegram"
-            ><svg width="20" height="20"
+            ><svg
+              width="20"
+              height="20"
               aria-hidden="true"
               focusable="false"
               role="img"
@@ -216,7 +243,9 @@
             aria-label="More sharing options"
             title="More sharing options"
           >
-            <svg width="20" height="20"
+            <svg
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               aria-hidden="true"
               focusable="false"
@@ -236,6 +265,7 @@
           Retry <kbd>R</kbd>
         </button>
       </header>
+      <p id="lot-label" aria-live="polite"></p>
       <div class="top-social">
         <p id="share-status" role="status" aria-live="polite"></p>
         <input

@@ -3,6 +3,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
+import { levels } from "./levels";
 import { shareContent, socialLinks } from "./sharing";
 const shareButtons = document.querySelectorAll<HTMLButtonElement>(
   "[data-native-share]",
@@ -17,8 +18,10 @@ const message = document.querySelector<HTMLDivElement>("#message")!;
 const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
 const powerFill = document.querySelector<HTMLElement>("#power-fill")!;
 const result = document.querySelector<HTMLDivElement>("#result")!;
-const start = new THREE.Vector3(-5.5, 0, 4.8);
-const target = new THREE.Vector3(4.2, 0, -3.7);
+let levelIndex = 0;
+const start = new THREE.Vector3();
+const target = new THREE.Vector3();
+const nextButton = document.querySelector<HTMLButtonElement>("#next-lot")!;
 const bounds = { x: 8.5, z: 7 };
 let renderer: THREE.WebGLRenderer;
 try {
@@ -91,11 +94,13 @@ for (const z of [-6.4, 6.4]) {
   box(15, 0.012, 0.06, 0xe9ecef, -0.3, 0.002, z);
 }
 for (let z = -2; z <= 2; z += 1.5) box(0.09, 0.015, 0.6, 0xbfc4b1, 0, 0.006, z);
-box(2.7, 0.018, 4.1, 0x96bb69, target.x, 0.012, target.z);
+const parkingBay = new THREE.Group();
+scene.add(parkingBay);
+box(2.7, 0.018, 4.1, 0x96bb69, 0, 0.012, 0, parkingBay);
 for (const x of [-1.35, 1.35])
-  box(0.08, 0.025, 4.1, 0xeaffc6, target.x + x, 0.025, target.z);
+  box(0.08, 0.025, 4.1, 0xeaffc6, x, 0.025, 0, parkingBay);
 for (const z of [-2.05, 2.05])
-  box(2.7, 0.025, 0.08, 0xeaffc6, target.x, 0.025, target.z + z);
+  box(2.7, 0.025, 0.08, 0xeaffc6, 0, 0.025, z, parkingBay);
 const textCanvas = document.createElement("canvas");
 textCanvas.width = 128;
 textCanvas.height = 128;
@@ -113,8 +118,8 @@ const p = new THREE.Mesh(
   }),
 );
 p.rotation.x = -Math.PI / 2;
-p.position.set(target.x, 0.04, target.z);
-scene.add(p);
+p.position.set(0, 0.04, 0);
+parkingBay.add(p);
 const signCanvas = document.createElement("canvas");
 signCanvas.width = 512;
 signCanvas.height = 256;
@@ -135,9 +140,9 @@ const sign = new THREE.Mesh(
   new THREE.PlaneGeometry(3.6, 1.8),
   new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide }),
 );
-sign.position.set(target.x, 2.7, -6.9);
+sign.position.set(4.2, 2.7, -6.9);
 sign.rotation.y = Math.atan2(camera.position.x, camera.position.z);
-box(0.12, 1.8, 0.12, 0x535c67, target.x, 0.9, -6.95);
+box(0.12, 1.8, 0.12, 0x535c67, 4.2, 0.9, -6.95);
 scene.add(sign);
 function makeCar(color: number) {
   const root = new THREE.Group();
@@ -170,15 +175,16 @@ function makeCar(color: number) {
   return root;
 }
 const parkedCars: THREE.Group[] = [];
-for (const [x, z, color] of [
-  [-6.3, -4.9, 0xc78051],
-  [-3.3, -4.9, 0x5b7970],
-  [6.2, 5, 0xe1b75f],
-]) {
-  const car = makeCar(color);
-  car.position.set(x, 0, z);
-  scene.add(car);
-  parkedCars.push(car);
+// Reuse scene objects across lots and retries instead of allocating new meshes.
+const carColors = [0xc78051, 0x5b7970, 0xe1b75f, 0x6383a3, 0xa66c70];
+for (
+  let i = 0;
+  i < Math.max(...levels.map((level) => level.cars.length));
+  i++
+) {
+  const parked = makeCar(carColors[i % carColors.length]);
+  scene.add(parked);
+  parkedCars.push(parked);
 }
 const { car, jets, sideJets, exhausts } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
@@ -237,7 +243,6 @@ for (const [x, z] of [
   stripe.position.y = 0.4;
   cone.add(stripe);
   cone.position.set(x, 0, z);
-  cone.userData.origin = cone.position.clone();
   scene.add(cone);
   cones.push({ mesh: cone, hit: false });
 }
@@ -390,15 +395,16 @@ function launch() {
     distance >= 8.9
       ? "CLEARED FOR PARKING."
       : distance > 5.5
-      ? "DOUBLE FLIP. SINGLE PARKING SPACE."
-      : "NORMAL CAR BEHAVIOR.";
+        ? "DOUBLE FLIP. SINGLE PARKING SPACE."
+        : "NORMAL CAR BEHAVIOR.";
   stunt.hidden = false;
   burst(position, reducedMotion.matches ? 6 : 22);
-  message.textContent = distance >= 8.9
-    ? "You are cleared for parking."
-    : distance > 5.5
-      ? "Two flips. The sign said zero."
-      : "The sign is more of a suggestion.";
+  message.textContent =
+    distance >= 8.9
+      ? "You are cleared for parking."
+      : distance > 5.5
+        ? "Two flips. The sign said zero."
+        : "The sign is more of a suggestion.";
 }
 function reset() {
   if (pointer !== null && stage.hasPointerCapture(pointer))
@@ -413,7 +419,24 @@ function reset() {
   stunt.hidden = true;
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
+  const level = levels[levelIndex];
+  start.set(level.start[0], 0, level.start[1]);
+  target.set(level.target[0], 0, level.target[1]);
+  parkingBay.position.copy(target);
+  parkedCars.forEach((parked, i) => {
+    const point = level.cars[i];
+    parked.visible = !!point;
+    if (point) parked.position.set(point[0], 0, point[1]);
+  });
+  document.querySelector("#lot-label")!.textContent =
+    `${levelIndex + 1} / ${levels.length} · ${level.name}`;
+  const completedLastLot = levelIndex === levels.length - 1;
+  nextButton.textContent = completedLastLot ? "Play again" : "Next lot";
+  nextButton.classList.toggle("secondary", completedLastLot);
+  result.classList.toggle("final-lot", completedLastLot);
+  document.querySelector<HTMLElement>("#share-score-label")!.hidden = !completedLastLot;
   position.copy(start);
+  landing.copy(start);
   pivot.position.copy(position).y = 0.5;
   pivot.rotation.set(0, 0, 0);
   flips = 0;
@@ -430,12 +453,14 @@ function reset() {
   shareStatus.textContent = "";
   shareLink.hidden = true;
   updateShareLinks();
-  message.textContent = "Land in the green parking space.";
-  for (const cone of cones) {
+  message.textContent = level.hint;
+  cones.forEach((cone, i) => {
     cone.hit = false;
-    cone.mesh.position.copy(cone.mesh.userData.origin);
+    const point = level.cones[i];
+    cone.mesh.visible = !!point;
+    if (point) cone.mesh.position.set(point[0], 0, point[1]);
     cone.mesh.rotation.set(0, 0, 0);
-  }
+  });
   for (const particle of particles) {
     scene.remove(particle.mesh);
     (particle.mesh.material as THREE.Material).dispose();
@@ -462,16 +487,19 @@ function finishFlight() {
   } else {
     const collided = parkedCars.some(
       (other) =>
+        other.visible &&
         Math.abs(position.x - other.position.x) < 1.5 &&
         Math.abs(position.z - other.position.z) < 2.65,
     );
     if (collided) {
       position.copy(oldPosition);
       hits++;
-      message.textContent = "Car hit. Your insurer has left the chat. Try another landing.";
+      message.textContent =
+        "Car hit. Your insurer has left the chat. Try another landing.";
     }
     for (const cone of cones)
       if (
+        cone.mesh.visible &&
         !cone.hit &&
         Math.abs(position.x - cone.mesh.position.x) < 1.05 &&
         Math.abs(position.z - cone.mesh.position.z) < 1.6
@@ -488,11 +516,12 @@ function finishFlight() {
   jets.visible = false;
   sideJets.visible = false;
   shockwave.position.copy(position).y = 0.05;
-  stunt.textContent = hits > previousHits
-    ? "CLAIM FILED."
-    : clearedCar
-      ? "WHAT A PARK!"
-      : "LANDING: MOSTLY INTENTIONAL.";
+  stunt.textContent =
+    hits > previousHits
+      ? "CLAIM FILED."
+      : clearedCar
+        ? "WHAT A PARK!"
+        : "LANDING: MOSTLY INTENTIONAL.";
   if (hits === previousHits)
     message.textContent = clearedCar
       ? "Traffic avoided. Parking still required."
@@ -505,18 +534,23 @@ function finishFlight() {
   ) {
     won = true;
     document.querySelector("#receipt-claims")!.textContent = String(hits);
-    document.querySelector("#receipt-insurance")!.textContent = hits ? "Pending" : "No claim";
+    document.querySelector("#receipt-insurance")!.textContent = hits
+      ? "Pending"
+      : "No claim";
     result.hidden = false;
-    document.querySelector("#result-title")!.textContent = hits
-      ? "Close enough."
-      : "Nailed it.";
+    document.querySelector("#result-title")!.textContent =
+      levelIndex === levels.length - 1 ? "All lots cleared." : hits ? "Close enough." : "Nailed it.";
     document.querySelector("#result-detail")!.textContent =
       `${flips} ${flips === 1 ? "flip" : "flips"}. ${hits} insurance ${hits === 1 ? "claim" : "claims"}. Zero normal driving.`;
-    message.textContent = "The future of parallel parking.";
+    message.textContent =
+      levelIndex === levels.length - 1
+        ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
+        : "The future of parallel parking.";
     updateShareLinks();
-    document
-      .querySelector<HTMLButtonElement>("#again")!
-      .focus({ preventScroll: true });
+    const primaryAction = levelIndex === levels.length - 1
+      ? result.querySelector<HTMLAnchorElement>("[data-social]")!
+      : nextButton;
+    primaryAction.focus({ preventScroll: true });
   }
 }
 stage.addEventListener("pointerdown", (event) => {
@@ -616,11 +650,17 @@ document.querySelector("#again")!.addEventListener("click", () => {
   reset();
   stage.focus({ preventScroll: true });
 });
+nextButton.addEventListener("click", () => {
+  if (!won) return;
+  levelIndex = (levelIndex + 1) % levels.length;
+  reset();
+  stage.focus({ preventScroll: true });
+});
 function updateShareLinks() {
   shareVersion++;
   const content = shareContent(
     location.href,
-    won ? { flips, hits } : undefined,
+    won ? { flips, hits, lot: levels[levelIndex].name, completedLots: levelIndex === levels.length - 1 ? levels.length : undefined } : undefined,
   );
   const links = socialLinks(content);
   for (const link of document.querySelectorAll<HTMLAnchorElement>(
@@ -665,7 +705,10 @@ for (const button of shareButtons)
     });
     try {
       await navigator.share(
-        shareContent(location.href, won ? { flips, hits } : undefined),
+        shareContent(
+          location.href,
+          won ? { flips, hits, lot: levels[levelIndex].name, completedLots: levelIndex === levels.length - 1 ? levels.length : undefined } : undefined,
+        ),
       );
     } catch (error) {
       if (
@@ -722,6 +765,7 @@ renderer.setAnimationLoop((now: number) => {
     if (!flight.clearedCar && pivot.position.y > 2)
       flight.clearedCar = parkedCars.some(
         (other) =>
+          other.visible &&
           Math.abs(pivot.position.x - other.position.x) < 0.75 &&
           Math.abs(pivot.position.z - other.position.z) < 1.35,
       );

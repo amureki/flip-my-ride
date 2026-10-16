@@ -347,3 +347,46 @@ button:disabled {
     max-width: 42px;
   }
 }
+#lot-label {
+  position: absolute;
+  top: max(64px, calc(env(safe-area-inset-top) + 48px));
+  left: 20px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+.result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.result-actions button {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+.result-actions kbd {
+  color: inherit;
+}
+@media (max-width: 600px) {
+  #lot-label {
+    left: 12px;
+  }
+}
+
+#result #share-score-label {
+  margin: 0 0 10px;
+  font-weight: bold;
+}
+.final-lot .result-social a,
+.final-lot .result-social button {
+  width: 44px;
+  height: 44px;
+  color: #fff;
+  background: #20252c;
+}
+.final-lot .result-social a:hover,
+.final-lot .result-social button:hover {
+  background: #39424d;
+}

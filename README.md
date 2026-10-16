@@ -15,6 +15,10 @@ Drag anywhere on the lot in the direction you want to jump. Drag farther for mor
 
 Cones count as insurance claims. Landing on a parked car or outside the lot returns the player to the previous position. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
 
+## Lots
+
+Play four lots in order: One Spot Over, Just Park It, Full Lot, and Last Space. Start with a short sideways flip, cross an open lot, then jump through two increasingly crowded layouts. Last Space has a three-jump route through the empty gaps. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
+
 ## Static deployment
 
 ```sh
