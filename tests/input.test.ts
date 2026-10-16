@@ -162,12 +162,12 @@ test("mobile pad below the camera projection scales power, respects the curb, an
   assert.equal(vm.runInContext('pointer', context), null);
   padHandlers.pointerdown(event);
   padHandlers.pointermove({...event, clientX: 184});
-  assert.ok(vm.runInContext('landing.x > 1 && landing.x < 2', context), 'Small drags must allow fine aiming');
+  assert.ok(vm.runInContext('landing.x >= 0.3 && landing.x <= 0.75', context), 'A 24px drag must allow a short, launchable jump');
   padHandlers.pointermove({...event, clientX: 196});
-  assert.ok(Math.abs(vm.runInContext('landing.x', context) - 9 * 0.5 ** 1.5) < 1e-10);
-  padHandlers.pointermove({...event, clientX: 232});
+  assert.ok(vm.runInContext('landing.x > 0.75 && landing.x <= 1.5', context), 'A 36px drag must stay in the fine aiming range');
+  padHandlers.pointermove({...event, clientX: 256});
   assert.equal(vm.runInContext('landing.x', context), 7.7);
-  padHandlers.pointerup({...event, clientX: 232});
+  padHandlers.pointerup({...event, clientX: 256});
   assert.equal(vm.runInContext('flight.to.x', context), 7.7);
 });
 
@@ -320,8 +320,10 @@ test("pad gestures recover after interruptions and ignore a second finger", () =
     padHandlers.lostpointercapture(second);
     padHandlers.pointerup(second);
     assert.equal(vm.runInContext('pointer', context), 1);
+    const previewX = vm.runInContext('landing.x', context);
     padHandlers.pointerup(event);
-    assert.ok(vm.runInContext('flight?.to.x > 3 && flips === 1', context), interruption);
+    assert.equal(vm.runInContext('flight?.to.x', context), previewX, interruption);
+    assert.equal(vm.runInContext('flips', context), 1, interruption);
     padHandlers.pointerup(event);
     assert.equal(vm.runInContext('flips', context), 1);
   }
