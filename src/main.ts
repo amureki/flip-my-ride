@@ -421,7 +421,7 @@ function reset() {
   const level = levels[levelIndex];
   trolleyTime = 0;
   trolley.root.visible = !!level.trolley;
-  trolley.update(trolleyTime, reducedMotion.matches);
+  if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   start.set(level.start[0], 0, level.start[1]);
   target.set(level.target[0], 0, level.target[1]);
   parkingBay.position.copy(target);
@@ -476,7 +476,7 @@ function finishFlight() {
   const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
-  const trolleyHit = !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12));
+  const trolleyHit = !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12), levels[levelIndex].trolley!);
   flight = null;
   pivot.rotation.set(0, 0, 0);
   if (
@@ -538,7 +538,7 @@ function finishFlight() {
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
     document.querySelector("#receipt-claims")!.textContent = String(score.hits);
     document.querySelector("#receipt-insurance")!.textContent = score.hits ? "Please stop calling" : "Suspiciously intact";
-    document.querySelector("#receipt-stamp")!.textContent = final ? "UNFIT FOR NORMAL ROADS" : ["NEIGHBOURHOOD AIR TRAFFIC", "UNEXPECTED ITEM: YOUR CAR", "OVERBOOKED. OVERFLIPPED."][levelIndex];
+    document.querySelector("#receipt-stamp")!.textContent = final ? "UNFIT FOR NORMAL ROADS" : ["NEIGHBOURHOOD AIR TRAFFIC", "OVERBOOKED. OVERFLIPPED.", "UNEXPECTED ITEM: YOUR CAR"][levelIndex];
     result.hidden = false;
     document.querySelector("#result-title")!.textContent = final ? "You passed. Somehow." : hits ? "Bumper-to-bumper flight." : "Parkour. But parked.";
     document.querySelector("#result-detail")!.textContent = final ? licenceVerdict(score.hits) : "Parking method: unnecessarily airborne.";
@@ -748,7 +748,7 @@ renderer.setAnimationLoop((now: number) => {
   updateKeyboardAim(dt);
   if (trolley.root.visible && !won) {
     trolleyTime += dt;
-    trolley.update(trolleyTime, reducedMotion.matches);
+    if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   }
   if (flight) {
     flight.time += dt;

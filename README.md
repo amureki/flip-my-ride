@@ -17,7 +17,7 @@ Cones count as insurance claims. Landing on a parked car or outside the lot retu
 
 ## Lots
 
-Play four lots in order: One Spot Over, Unexpected Item, Full Lot, and Last Space. Start with a short sideways flip, time a landing around a runaway shopping trolley, then jump through two increasingly crowded layouts. Last Space has a three-jump route through the empty gaps. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
+Play four lots in order: One Spot Over, Full Lot, Unexpected Item, and Last Space. Start with a short sideways flip, navigate parked cars, then time a landing around a runaway shopping trolley. Last Space combines a three-jump route through empty gaps with a trolley crossing the final approach. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
 
 ## Static deployment
 

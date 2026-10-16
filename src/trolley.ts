@@ -1,12 +1,20 @@
 import * as THREE from "three";
 
-export function trolleyPosition(time: number) {
-  return { x: 3.6 + 2.8 * Math.sin(time * Math.PI / 4), z: -3.7 };
+export type TrolleyRoute = { from: readonly [number, number]; to: readonly [number, number] };
+
+export function trolleyPosition(time: number, route: TrolleyRoute) {
+  const progress = (1 + Math.sin(time * Math.PI / 4)) / 2;
+  return {
+    x: route.from[0] + (route.to[0] - route.from[0]) * progress,
+    z: route.from[1] + (route.to[1] - route.from[1]) * progress,
+  };
 }
 
-export function hitsTrolley(x: number, z: number, time: number) {
-  const trolley = trolleyPosition(time);
-  return Math.abs(x - trolley.x) < 1.65 && Math.abs(z - trolley.z) < 1.95;
+export function hitsTrolley(x: number, z: number, time: number, route: TrolleyRoute) {
+  const trolley = trolleyPosition(time, route);
+  const vertical = route.from[0] === route.to[0];
+  return Math.abs(x - trolley.x) < (vertical ? 1.3 : 1.65)
+    && Math.abs(z - trolley.z) < (vertical ? 2.35 : 1.95);
 }
 
 export function makeTrolley() {
@@ -46,9 +54,10 @@ export function makeTrolley() {
   }
   // One lonely grocery item accompanies the runaway trolley.
   bar(0.25, 0.88, 0, 0.32, 0.42, 0.28, plastic);
-  return { root, update(time: number, reducedMotion: boolean) {
-    const point = trolleyPosition(time);
+  return { root, update(time: number, reducedMotion: boolean, route: TrolleyRoute) {
+    const point = trolleyPosition(time, route);
     root.position.set(point.x, 0, point.z);
+    root.rotation.y = Math.atan2(-(route.to[1] - route.from[1]), route.to[0] - route.from[0]);
     root.rotation.z = reducedMotion ? 0 : Math.sin(time * 18) * 0.025;
     wheels[0].rotation.y = reducedMotion ? 0 : Math.sin(time * 22) * 0.4;
   } };
