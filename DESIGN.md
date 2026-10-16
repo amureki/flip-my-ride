@@ -37,3 +37,7 @@ Sharing uses locally embedded Simple Icons SVG marks for X, WhatsApp, and Telegr
 ## Parking jokes
 
 A small NO KICKFLIPS sign stands behind the target bay. Launch captions respond to jump power; landing captions respond to clearing a parked car or filing a claim, with collisions taking priority. The completion overlay includes a compact insurance receipt with the actual claim count, a €0 parking fee, and pending insurance only when claims exist.
+
+## Lighting
+
+Warm directional sunlight and cool sky fill use filmic tone mapping and filtered soft shadows. The Roadster uses a precomputed reflection map and a restrained clear coat. A soft ground contact shadow beneath its body and tires fades with jump height. The reflection map is generated once; contact shadows use five shared-texture planes without a full-screen rendering pass.

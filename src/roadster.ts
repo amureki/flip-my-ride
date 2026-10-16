@@ -44,9 +44,11 @@ function shell(sections: number[][], material: THREE.Material) {
 
 export function makeRoadster() {
   const car = new THREE.Group();
-  const paint = new THREE.MeshStandardMaterial({
+  const paint = new THREE.MeshPhysicalMaterial({
     color: 0xf4f5f7,
-    roughness: 0.27,
+    roughness: 0.3,
+    clearcoat: 0.65,
+    clearcoatRoughness: 0.22,
     metalness: 0.25,
     flatShading: true,
   });

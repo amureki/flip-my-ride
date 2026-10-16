@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { shareContent, socialLinks } from "./sharing";
@@ -27,15 +29,17 @@ try {
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
 renderer.setClearColor(0xd5d8dc);
 stage.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera();
 camera.position.set(14, 20, 22);
 camera.lookAt(0, 0, 0);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x687381, 2.6));
-const sun = new THREE.DirectionalLight(0xffffff, 3.2);
+scene.add(new THREE.HemisphereLight(0xe7f0ff, 0x687381, 1.8));
+const sun = new THREE.DirectionalLight(0xfff3df, 2.8);
 sun.position.set(-8, 18, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -47,7 +51,9 @@ Object.assign(sun.shadow.camera, {
   near: 1,
   far: 60,
 });
-sun.shadow.normalBias = 0.035;
+sun.shadow.normalBias = 0.025;
+sun.shadow.bias = -0.0001;
+sun.shadow.radius = 2.5;
 scene.add(sun);
 const materials = new Map<number, THREE.MeshStandardMaterial>();
 function mat(color: number) {
@@ -176,6 +182,18 @@ for (const [x, z, color] of [
 }
 const { car, jets, sideJets, exhausts } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
+const contactShadow = makeContactShadow(scene);
+const environment = new RoomEnvironment();
+const pmrem = new THREE.PMREMGenerator(renderer);
+const reflections = pmrem.fromScene(environment, 0.04);
+car.traverse((object) => {
+  if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshStandardMaterial) {
+    object.material.envMap = reflections.texture;
+    object.material.envMapIntensity = 0.45;
+  }
+});
+environment.dispose();
+pmrem.dispose();
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const stunt = document.querySelector<HTMLElement>("#stunt")!;
 let touchdown = 1;
@@ -758,6 +776,7 @@ renderer.setAnimationLoop((now: number) => {
       particles.splice(i, 1);
     }
   }
+  contactShadow.update(pivot);
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
 });
