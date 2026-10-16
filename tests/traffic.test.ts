@@ -64,7 +64,7 @@ test("sideways cars use their rotated footprint for landing and roof support", (
 test("all seven lots keep reachable signs and use the side entrances", () => {
   assert.equal(levels.length, 7);
   assert.deepEqual(levels.slice(0, 3).map(level => level.name), ["One Spot Over", "Full Lot", "Unexpected Item"]);
-  assert.deepEqual(levels.slice(3).map(level => level.traffic!.length), [1, 1, 2, 3]);
+  assert.deepEqual(levels.slice(3).map(level => level.traffic!.length), [1, 2, 3, 3]);
   assert.equal(new Set(levels.map(level => level.signReply)).size, 7);
   for (const level of levels) {
     assert.ok(level.cones.length > 0);
@@ -255,4 +255,15 @@ test("routes keep position and heading continuous on screen and inactive cars ha
       previous=point;
     }
   }
+});
+
+
+test("staggered arrivals stay outside the lot until their scheduled entrance", () => {
+  const delayed = levels[6].traffic!.find(route => route.arrivesAfter === 7)!;
+  assert.equal(trafficPosition(6.99, delayed).active, false);
+  const entrance = trafficPosition(7, delayed);
+  assert.equal(entrance.active, true);
+  assert.equal(entrance.arriving, true);
+  assert.deepEqual([entrance.x, entrance.z], [-14, 0]);
+  assert.ok(trafficPosition(8, delayed).x > -14);
 });

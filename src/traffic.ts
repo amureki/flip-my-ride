@@ -5,14 +5,16 @@ export type TrafficRoute = {
   model: VehicleModel;
   bay: readonly [number, number];
   parkFor: number;
+  maneuver?: number;
   speed: number;
   gap: number;
   phase?: number;
+  arrivesAfter?: number;
   once?: boolean;
 };
 
 export function trafficDuration(route: TrafficRoute) {
-  return route.parkFor + 10 + 28 / route.speed + route.gap;
+  return route.parkFor + 2 * (route.maneuver ?? 5) + 28 / route.speed + route.gap;
 }
 
 function smoothstep(t: number) {
@@ -21,36 +23,40 @@ function smoothstep(t: number) {
 
 export function trafficPosition(time: number, route: TrafficRoute) {
   const [x, z] = route.bay;
+  const maneuver = route.maneuver ?? 5;
   const turnX = x - 3;
   const exitDuration = (14 - turnX) / route.speed;
   const entryDuration = (turnX + 14) / route.speed;
-  const period = route.parkFor + 10 + exitDuration + entryDuration + route.gap;
-  const total = Math.max(0, time + (route.phase ?? 0));
+  const period = route.parkFor + 2 * maneuver + exitDuration + entryDuration + route.gap;
+  const departureEnd = route.parkFor + maneuver + exitDuration;
+  const point = {x, z, heading: 0, reversing: false, turning: false, active: true, bay: route.bay, arriving: false};
+  if (route.arrivesAfter !== undefined && time < route.arrivesAfter)
+    return {...point, x:-14, z:0, heading:-Math.PI / 2, active:false};
+  const total = route.arrivesAfter === undefined ? Math.max(0, time + (route.phase ?? 0))
+    : time - route.arrivesAfter + departureEnd + route.gap;
   let age = total % period;
-  const departureEnd = route.parkFor + 5 + exitDuration;
-  const point = {x, z, heading: 0, reversing: false, turning: false, active: true};
   if (route.once && total >= departureEnd) return {...point, x:14, z:0, active:false};
   if (age < route.parkFor) return {...point, reversing: age >= route.parkFor - 0.75};
   age -= route.parkFor;
   let reverse = true;
-  if (age >= 5) {
-    age -= 5;
+  if (age >= maneuver) {
+    age -= maneuver;
     if (age < exitDuration) return {...point, x:turnX + smoothstep(age / exitDuration) * (14 - turnX), z:0, heading:-Math.PI / 2};
     age -= exitDuration;
-    if (age < route.gap) return {...point, x:14, z:0, active:false};
-    age -= route.gap;
-    if (age < entryDuration) return {...point, x:-14 + smoothstep(age / entryDuration) * (turnX + 14), z:0, heading:-Math.PI / 2};
+    if (age < route.gap - 1e-9) return {...point, x:14, z:0, active:false};
+    age = Math.max(0, age - route.gap);
+    if (age < entryDuration) return {...point, x:-14 + smoothstep(age / entryDuration) * (turnX + 14), z:0, heading:-Math.PI / 2, arriving:true};
     age -= entryDuration;
     reverse = false;
   }
   // The same curved parking maneuver runs backward on departure and forward on arrival.
-  const u = reverse ? 1 - age / 5 : age / 5;
+  const u = reverse ? 1 - age / maneuver : age / maneuver;
   const t = smoothstep(Math.max(0, Math.min(1, u))), v = 1 - t;
   const px = v*v*v*turnX + 3*v*v*t*x + 3*v*t*t*x + t*t*t*x;
   const pz = 3*v*t*t*(z * 0.4) + t*t*t*z;
   const dx = 3*v*v*(x-turnX);
   const dz = 6*v*t*(z*0.4) + 3*t*t*(z*0.6);
-  return {...point, x:px, z:pz, heading:Math.atan2(-dx,-dz), reversing:reverse, turning:true};
+  return {...point, x:px, z:pz, heading:Math.atan2(-dx,-dz), reversing:reverse, turning:true, arriving:!reverse};
 }
 
 export function orientedVehicleHeight(model: VehicleModel, dx: number, dz: number, heading: number,
@@ -88,7 +94,7 @@ export function driverTimeAfter(state: DriverState, seconds: number) {
   return state.time + state.speed * ramp + ramp * ramp + seconds - ramp;
 }
 
-export type TrafficPose = {x: number; z: number; heading?: number; active?: boolean; turning?: boolean};
+export type TrafficPose = {x: number; z: number; heading?: number; active?: boolean; turning?: boolean; bay?: readonly [number, number]; arriving?: boolean};
 
 export function trafficOverlap(a: TrafficPose, b: TrafficPose, first: {halfX:number; halfZ:number}, second: {halfX:number; halfZ:number}, margin = 0) {
   if (a.active === false || b.active === false) return false;
@@ -116,10 +122,22 @@ export function advanceTraffic(bodies: TrafficBody[], seconds: number) {
     elapsed += dt;
     const current = bodies.map(b => b.at(b.state.time));
     const probe = bodies.map(b => b.at(b.state.time + 0.15));
-    const blocked = bodies.map(b => !!b.fixed);
+    const bayWaiting = bodies.map((body,i) => !!current[i].arriving && bodies.some((other,j) => {
+      const bay = current[i].bay, occupied = current[j];
+      if (i === j || !bay || !occupied.bay || occupied.active === false || (!occupied.turning && occupied.z >= -0.1)) return false;
+      if (bay[0] !== occupied.bay[0] || bay[1] !== occupied.bay[1]) return false;
+      // Wait upstream so the current occupant has room to reverse into the aisle.
+      return probe[i].x > bay[0] - 3 - body.halfZ - other.halfZ - 0.3;
+    }));
+    const blocked = bodies.map((body,i) => !!body.fixed || bayWaiting[i]);
     const overlaps = (a: TrafficPose, b: TrafficPose, i: number, j: number) => trafficOverlap(a,b,bodies[i],bodies[j],0.15);
-    const hasPriority = (a: number, b: number) => !!current[a].turning !== !!current[b].turning
-      ? !current[a].turning : a < b;
+    const hasPriority = (a: number, b: number) => {
+      const first = current[a], second = current[b];
+      if (first.bay && second.bay && first.bay[0] === second.bay[0] && first.bay[1] === second.bay[1] && first.arriving !== second.arriving)
+        return !first.arriving;
+      if (bayWaiting[a] !== bayWaiting[b]) return !bayWaiting[a];
+      return !!first.turning !== !!second.turning ? !first.turning : a < b;
+    };
     // Cars already in the aisle pass before cars entering it from a parking space.
     for (let pass = 0; pass < bodies.length; pass++) {
       for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
