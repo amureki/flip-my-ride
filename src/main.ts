@@ -6,7 +6,7 @@ import { trackEvent } from "./analytics";
 import * as THREE from "three";
 import { makeLotBase, makeTrafficAccess, makeParkedCar, makeTree } from "./scenery";
 import { makeDamage } from "./damage";
-import { makeAsphalt } from "./ground";
+import { makeAsphalt, makeRoadInstructions } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
@@ -172,6 +172,19 @@ function box(
 scene.add(makeLotBase());
 scene.add(makeTrafficAccess());
 scene.add(makeAsphalt(renderer.capabilities.getMaxAnisotropy()));
+let roadInstructions = makeRoadInstructions(renderer.capabilities.getMaxAnisotropy(), mobileControls.matches);
+scene.add(roadInstructions);
+let instructionsFading = false;
+mobileControls.addEventListener("change", () => {
+  const opacity = roadInstructions.material.opacity;
+  scene.remove(roadInstructions);
+  roadInstructions.geometry.dispose();
+  roadInstructions.material.map?.dispose();
+  roadInstructions.material.dispose();
+  roadInstructions = makeRoadInstructions(renderer.capabilities.getMaxAnisotropy(), mobileControls.matches);
+  roadInstructions.material.opacity = opacity;
+  scene.add(roadInstructions);
+});
 const parkingBay = new THREE.Group();
 scene.add(parkingBay);
 box(2.7, 0.018, 4.1, 0x809b69, 0, 0.012, 0, parkingBay);
@@ -569,6 +582,8 @@ function launch(replayMove?: ReplayMove) {
   const distance = Math.hypot(position.x - landing.x, position.z - landing.z);
   clearAim();
   if (distance < 0.3 || won || flight) return;
+  instructionsFading = true;
+  document.querySelector(".game-controls")!.classList.add("started");
   if (!replay) dismissRotationHint();
   if (!replay && !attemptStarted) {
     attemptStarted = true;
@@ -690,6 +705,9 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   shareStatus.textContent = "";
   shareLink.hidden = true;
   updateShareLinks();
+  instructionsFading = false;
+  document.querySelector(".game-controls")!.classList.remove("started");
+  roadInstructions.material.opacity = reason === "replay" ? 0 : 1;
   message.textContent = level.hint;
   cones.forEach((cone, i) => {
     cone.hit = false;
@@ -1093,7 +1111,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function resize() {
-  const { width, height } = stage.getBoundingClientRect();
+  const { width, height, left, top } = stage.getBoundingClientRect();
   const aspect = width / height;
   // Preserve the diagonal view while trimming mobile framing to the lot edges.
   // Framing depends only on viewport size, so aiming and flight never move it.
@@ -1111,6 +1129,21 @@ function resize() {
   camera.far = 100;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+  if (mobileControls.matches) {
+    message.style.removeProperty("left");
+    message.style.removeProperty("top");
+    message.style.removeProperty("width");
+    return;
+  }
+  const edgeStart = new THREE.Vector3(-6, 0, -8.3).project(camera);
+  const edgeEnd = new THREE.Vector3(6, 0, -8.3).project(camera);
+  const dx = (edgeEnd.x - edgeStart.x) * width / 2;
+  const dy = -(edgeEnd.y - edgeStart.y) * height / 2;
+  const appRect = document.querySelector<HTMLElement>("#app")!.getBoundingClientRect();
+  message.style.left = (left - appRect.left + (1 + (edgeStart.x + edgeEnd.x) / 2) * width / 2) + "px";
+  message.style.top = (top - appRect.top + (1 - (edgeStart.y + edgeEnd.y) / 2) * height / 2) + "px";
+  message.style.width = Math.hypot(dx, dy) + "px";
+  message.style.setProperty("--edge-angle", Math.atan2(dy, dx) + "rad");
 }
 new ResizeObserver(resize).observe(stage);
 mobileControls.addEventListener("change", resize);
@@ -1120,6 +1153,10 @@ let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
   const dt = document.hidden ? 0 : Math.max(0, Math.min((now - last) / 1000, 0.04));
   last = now;
+  if (instructionsFading) {
+    roadInstructions.material.opacity = reducedMotion.matches ? 0 : Math.max(0, roadInstructions.material.opacity - dt / 0.3);
+  }
+  roadInstructions.visible = !mobileControls.matches && !won && !replay && roadInstructions.material.opacity > 0;
   if (!won) roundTime += dt;
   if (attemptStarted && !won && !replay && !document.hidden) attemptSeconds += dt;
   if (!won) {

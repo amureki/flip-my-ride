@@ -90,7 +90,7 @@ kbd {
   padding: 1px 4px;
   color: #fff;
 }
-.instructions {
+.game-controls {
   position: absolute;
   bottom: max(14px, env(safe-area-inset-bottom));
   left: 16px;
@@ -106,10 +106,10 @@ kbd {
   align-items: end;
   justify-content: center;
   line-height: 1.4;
-  text-wrap: balance;
+  white-space: nowrap;
   font-weight: 700;
 }
-.instructions p {
+.desktop-hint, .mobile-hint {
   margin: 8px 0 4px;
   color: #444b55;
   font-size: 12px;
@@ -237,7 +237,7 @@ h2 {
   h1 {
     font-size: 18px;
   }
-  .instructions p span {
+  #road-instructions p span {
     display: none;
   }
   #message {
@@ -445,7 +445,7 @@ button:disabled {
   visibility: hidden;
 }
 .replaying > #stage,
-.replaying > .instructions {
+.replaying > #message {
   visibility: visible;
 }
 .replaying #replay-panel {
@@ -476,7 +476,7 @@ button:disabled {
   line-height: 1.4;
 }
 
-#app:has(#result:not([hidden])) > .instructions {
+#app:has(#result:not([hidden])) > .game-controls {
   visibility: hidden;
 }
 #result .replay-actions .secondary {
@@ -550,14 +550,14 @@ button:disabled {
   }
   #app {
     --pad-height: 128px;
-    --controls-height: calc(var(--pad-height) + 48px + env(safe-area-inset-bottom));
+    --controls-height: calc(var(--pad-height) + 28px + env(safe-area-inset-bottom));
   }
   #stage {
     top: max(90px, calc(env(safe-area-inset-top) + 76px));
     bottom: var(--controls-height);
     cursor: default;
   }
-  .instructions {
+  .game-controls {
     bottom: max(8px, env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--pad-height) minmax(0, 1fr);
@@ -565,29 +565,15 @@ button:disabled {
     column-gap: 8px;
     align-items: center;
   }
-  .instructions #message {
-    grid-column: 1;
-    grid-row: 1;
-    min-height: 0;
-    align-items: center;
-    font-size: 16px;
-  }
-  .instructions .mobile-hint {
-    grid-column: 3;
-    grid-row: 1;
-    margin: 0 auto;
-    max-width: 20ch;
-    font-size: 14px;
-  }
-  .instructions .game-credit {
+
+
+  .game-controls .game-credit {
     grid-column: 1 / -1;
     grid-row: 2;
     margin-top: 4px;
     font-size: 10px;
   }
-  .instructions .desktop-hint {
-    display: none;
-  }
+
   .mobile-hint {
     display: block;
   }
@@ -639,7 +625,7 @@ button:disabled {
   #app:has(#result:not([hidden])) #stage {
     inset: 0;
   }
-  #app:has(#error:not([hidden])) .instructions {
+  #app:has(#error:not([hidden])) .game-controls {
     display: none;
   }
 }
@@ -674,29 +660,25 @@ button:disabled {
     right: var(--sidebar-right);
     width: var(--sidebar-width);
   }
-  .instructions {
+  .game-controls {
     top: max(84px, calc(env(safe-area-inset-top) + 76px));
     left: auto;
     right: var(--sidebar-right);
     width: var(--sidebar-width);
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(2.8em, 1fr) var(--pad-height);
+    grid-template-rows: 1fr;
     row-gap: 6px;
     overflow-y: auto;
     pointer-events: auto;
     overscroll-behavior: contain;
   }
-  .instructions #message {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .instructions .mobile-hint,
-  .instructions .game-credit {
+
+  .game-controls .game-credit {
     display: none;
   }
-  .instructions #thumb-pad {
+  .game-controls #thumb-pad {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     margin-inline: auto;
   }
 }
@@ -720,10 +702,77 @@ button:disabled {
 @media (pointer: fine) and (max-height: 500px) {
   #stage {
     top: 80px;
-    bottom: 110px;
+    bottom: 36px;
   }
   #app:has(#result:not([hidden])) #stage,
   #app:has(#error:not([hidden])) #stage {
     inset: 0;
   }
+}
+
+#message {
+  position: absolute;
+  right: auto;
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  padding-bottom: 8px;
+  text-align: center;
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%) rotate(var(--edge-angle, 0rad));
+  pointer-events: none;
+}
+#app:has(#result:not([hidden])) > #message,
+#app:has(#error:not([hidden])) > #message,
+#app.replaying > #message { visibility: hidden; }
+
+@media (pointer: coarse) {
+  #message {
+    top: max(86px, calc(env(safe-area-inset-top) + 70px));
+    left: 12px;
+    right: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: left;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding: 0;
+    transform: none;
+  }
+  #stage { top: max(132px, calc(env(safe-area-inset-top) + 116px)); }
+  #rotation-hint { top: max(132px, calc(env(safe-area-inset-top) + 116px)); }
+  .game-controls .mobile-hint {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    font-size: 14px;
+    color: #444b55;
+    opacity: 1;
+    transition: opacity 300ms ease-out;
+  }
+  .game-controls .cancel-hint { grid-column: 3; }
+  .game-controls.started .mobile-hint { opacity: 0; }
+}
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
+  #message {
+    top: max(80px, calc(env(safe-area-inset-top) + 72px));
+    left: auto;
+    right: var(--sidebar-right);
+    width: var(--sidebar-width);
+  }
+  #stage { top: max(8px, env(safe-area-inset-top)); }
+  .game-controls {
+    top: max(126px, calc(env(safe-area-inset-top) + 118px));
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: var(--pad-height) auto;
+  }
+  .game-controls #thumb-pad { grid-column: 1 / -1; }
+  .game-controls .mobile-hint { grid-column: 1; grid-row: 2; }
+  .game-controls .cancel-hint { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-controls .mobile-hint { transition: none; }
 }

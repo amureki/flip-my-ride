@@ -22,6 +22,12 @@ function inputFixture() {
   const aim = {visible: false, position: new THREE.Vector3()};
   const aimLine = {visible: false, geometry: new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])};
   const message = {textContent: ''};
+  let instructionsFading = false;
+  const controlClasses = new Set();
+  const document = {querySelector(selector) {
+    if (selector !== '.game-controls') throw new Error('Unexpected selector: ' + selector);
+    return {classList: {add(name) {controlClasses.add(name)}}};
+  }};
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
   const parkedCars = [], carDamage = [], cones = [];
@@ -271,6 +277,15 @@ test("desktop aim follows the destination from a displaced car and clamps range"
   assert.equal(vm.runInContext('flight?.to.x', context), 5);
 });
 
+test("touch release without movement never launches an unseen target", () => {
+  const {padHandlers, context} = inputFixture();
+  const event = {pointerId: 1, pointerType: 'touch', clientX: 747, clientY: 190, target: {closest() {return null}}};
+  padHandlers.pointerdown(event);
+  padHandlers.pointerup({...event, clientX: 821, clientY: 154});
+  assert.equal(vm.runInContext('flight === null && flips === 0 && !aim.visible', context), true);
+  assert.equal(vm.runInContext('instructionsFading || controlClasses.has("started")', context), false);
+});
+
 test("touch release commits the last visible preview despite lift-off drift", () => {
   const {padHandlers, context} = inputFixture();
   const event = {pointerId: 1, pointerType: 'touch', clientX: 160, clientY: 700, target: {closest() {return null}}};
@@ -279,6 +294,7 @@ test("touch release commits the last visible preview despite lift-off drift", ()
   const preview = vm.runInContext('landing.x', context);
   padHandlers.pointerup({...event, clientX: 160});
   assert.equal(vm.runInContext('flight?.to.x', context), preview);
+  assert.equal(vm.runInContext('instructionsFading && controlClasses.has("started")', context), true);
 });
 
 test("returning a touch to its origin cancels even if the release drifts", () => {

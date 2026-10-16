@@ -20,15 +20,15 @@ rounded:
 
 Keep the interface focused on the game, without a decorative page layout.
 
-The canvas fills the viewport. A small title, flip count, and Retry button sit at the top. Controls and status sit at the bottom. Neutral gray, black, and white frame the scene. Green identifies the parking target. No web fonts, oversized headings, page sections, or introductory copy.
+The canvas fills the viewport. A small title, flip count, and Retry button sit at the top. Instructions are painted flat onto the asphalt and fade out after the first valid flip. Live status follows the far map edge’s diagonal, just outside the curb; the mobile thumb pad and credit remain at the bottom. Neutral gray, black, and white frame the scene. Green identifies the parking target. No web fonts, oversized headings, page sections, or introductory copy.
 
 ## Aiming and camera
 
 The orthographic camera fits the whole lot on desktop and mobile. Desktop presses select the ground point under the pointer, with a maximum nine-unit jump. Holding and moving adjusts the landing ring; release launches even without dragging. Escape cancels. Cancellation events only affect the active pointer.
 
-On devices with a coarse primary pointer, a thumb pad is centered between feedback and the control hint in portrait, and centered in the right-hand control area on short landscape screens. Its visible outline is 96 × 96 pixels within a 128 × 128 pixel touch area. Feedback and the pad share one row to preserve game space. The camera fits the separate stage clear of the controls.
+On devices with a coarse primary pointer, a thumb pad is centered below the stage in portrait, and centered in the right-hand control area on short landscape screens. Its visible outline is 96 × 96 pixels within a 128 × 128 pixel touch area. Instructions overlay the road, leaving only the pad and credit below the stage. The camera fits the separate stage clear of the controls.
 
-Mobile uses a diagonal elevated camera with a 22.2-unit minimum view width. Keep the full playable lot visible, even if that limits zoom. Decorative scenery can crop. Short desktop windows reserve 80px above and 110px below the stage so the lot cannot overlap the controls; results and errors use the full stage. The camera remains fixed during aiming, flight, and landing; only viewport or input-mode changes reframe it.
+Mobile uses a diagonal elevated camera with a 22.2-unit minimum view width. Keep the full playable lot visible, even if that limits zoom. Decorative scenery can crop. Short desktop windows reserve 80px above and 36px below the stage so the lot cannot overlap the controls; results and errors use the full stage. The camera remains fixed during aiming, flight, and landing; only viewport or input-mode changes reframe it.
 
 Mobile feedback uses 16px text and control hints use 14px text. The pad uses a pale gray (#e5e8ec) surface and gray (#8b949e) boundary with the existing dark and blue control colors. Pad drags use screen direction. Full power requires 96 CSS pixels of travel, or two pad radii. A quadratic response curve gives finer control over short jumps, with a nine-unit maximum. Releasing uses the last visible landing preview, ignoring coordinate changes as the finger lifts. Sliding back to the touch starting point clears the preview and cancels on release. Pointer capture allows dragging beyond the pad. Touches on the lot do not aim. Cancellation, focus loss, retry, and viewport changes clear the gesture.
 
@@ -46,7 +46,7 @@ Side jets switch from one side to the other halfway through each jump. Each acti
 
 ## Feedback
 
-A single bottom feedback area shows the instruction, then one launch joke, then the landing outcome. It reserves two lines to keep controls steady and uses an atomic live region. Control hints remain in a separate, less prominent line; no floating caption covers the scene. Replay captions use the same feedback text. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. The camera does not shake.
+A single-line atomic live region aligned with the far map edge shows the lot hint, then one launch joke, then the landing outcome. Only control instructions appear on the road; the parking objective is omitted. Control instructions are worn off-white paint on a flat mesh on the asphalt. They follow the road perspective, receive shadows, and are occluded by cars. They fade out over 300ms after the first valid flip and return on Retry or a new lot. Reduced motion hides them immediately. Replay captions use the same feedback text. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. The camera does not shake.
 
 ## Sharing
 
@@ -111,3 +111,5 @@ The first cone hit gives the Roadster a cone hat, retained through subsequent fl
 Contact with a parked car shows small, camera-facing "beep!" speech bubbles alternating above that car and the Roadster. First contact gets one exchange; a second landing on the same car gets two exchanges. Each bubble lasts 0.7 seconds with a short gap, without bouncing or sound. The bubbles follow the cars and clear on Retry, results, and replay. Discovery captions remain available to screen readers. Wrecks do not add repeat claims. A third landing on the same car discovers "This is fine · The warranty has left the chat." Crushing a moving car discovers "Traffic jam · You made it permanent." These use the same once-per-run discovery queue and remain silent in replay. Players can complete every lot without finding these discoveries.
 
 A small off-white discovery banner uses 13px text beneath the lot information, stays for 3.5 seconds, and queues simultaneous discoveries. It does not capture input or animate. Each caption appears once per seven-lot run, including across retries. All discoveries are silent; there is no audio control. Retry and lot changes reset props and pending effects. Replay reconstructs the props silently and restores the completed state when exited.
+
+On mobile, help is horizontal below the lot name and occupies at most two lines. Control guidance sits beside the thumb pad (below it in short landscape), fades after the first valid flip, and returns on Retry. Asphalt instructions are hidden on mobile. Desktop retains the diagonal single-line help and painted controls.

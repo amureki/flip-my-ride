@@ -71,3 +71,40 @@ export function makeAsphalt(anisotropy: number) {
   ground.receiveShadow = true;
   return ground;
 }
+
+export function makeRoadInstructions(anisotropy: number, mobile: boolean) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 640;
+  const context = canvas.getContext("2d")!;
+  context.fillStyle = "#e9ecef";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = "bold 78px Arial";
+  context.fillText(mobile ? "DRAG TO AIM · RELEASE TO FLIP" : "CLICK TO FLIP · HOLD TO AIM", 1024, 245);
+  context.font = "bold 64px Arial";
+  context.fillText(mobile ? "SLIDE BACK TO CANCEL" : "ARROWS / WASD AIM · SPACE FLIPS · ESC CANCELS", 1024, 395);
+  // Small gaps give the lettering the same worn paint finish as the bay lines.
+  context.globalCompositeOperation = "destination-out";
+  let seed = 417;
+  for (let i = 0; i < 14000; i++) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const x = seed % 2048;
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    context.fillRect(x, seed % 640, 2, 3);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(anisotropy, 8);
+  const markings = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 3.75),
+    new THREE.MeshStandardMaterial({
+      map: texture, transparent: true, depthWrite: false, roughness: 0.96,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+    }),
+  );
+  markings.rotation.x = -Math.PI / 2;
+  markings.position.set(0, -0.025, 0);
+  markings.receiveShadow = true;
+  return markings;
+}
