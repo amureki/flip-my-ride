@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import ts from "typescript";
 import * as THREE from "three";
+import { vehicleLandingHeight } from "../src/vehicles.ts";
 
 // Run the real input handlers without creating a WebGL renderer.
 const source = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
@@ -12,7 +13,7 @@ function inputFixture() {
   const handlers = {};
   const keys = {};
   const padHandlers = {};
-  const context = vm.createContext({ THREE, handlers, padHandlers, keys, HTMLInputElement: class {}, Element: class {} });
+  const context = vm.createContext({ THREE, vehicleLandingHeight, handlers, padHandlers, keys, HTMLInputElement: class {}, Element: class {} });
   const fixture = `
   const position = new THREE.Vector3();
   const landing = position.clone();
@@ -22,6 +23,7 @@ function inputFixture() {
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
   const parkedCars = [], carDamage = [], cones = [];
+  const parkedVehicles = [];
   const trolleyDamage = {damaged: false}, levels = [{}], levelIndex = 0;
   const aimSymbols = Array.from({length: 3}, () => ({visible: false, material: {color: new THREE.Color()}}));
   let won = false, flight = null, flips = 0, touchdown = 1, replay = null;
@@ -49,7 +51,7 @@ function inputFixture() {
   `;
   const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset('));
   const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('document.querySelector("#reset")'));
-  vm.runInContext(ts.transpile(fixture + functions + events), context);
+  vm.runInContext(ts.transpile(fixture + source.slice(source.indexOf("function obstacleHeight("), source.indexOf("const carDamage =")) + functions + events), context);
   return {handlers, padHandlers, keys, context};
 }
 
@@ -142,11 +144,11 @@ test("replay preserves flight timing when reduced-motion preferences change", ()
   const {context} = inputFixture();
   vm.runInContext('showAim(new THREE.Vector3(2, 0, 0))', context);
   assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); carDamage.push({damaged: false}); updateAimFeedback()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); carDamage.push({damaged: false}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); updateAimFeedback()', context);
   assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
   assert.match(vm.runInContext('message.textContent', context), /Collision risk/);
   vm.runInContext('carDamage[0].damaged = true; updateAimFeedback()', context);
-  assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
   vm.runInContext('showAim(new THREE.Vector3(9,0,0))', context);
   assert.equal(vm.runInContext('aimSymbols[2].visible', context), true);
 });
@@ -181,4 +183,39 @@ test("pad cancellation, retry and resize cannot launch a pending gesture", () =>
     padHandlers.pointerup({...event, clientY: 48});
     assert.equal(vm.runInContext('flight === null && !aim.visible && pointer === null', context), true, cancel);
   }
+});
+
+
+test("landings on cars keep roof clearance and subsequent jumps start at roof height", () => {
+  const {context} = inputFixture();
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); landing.set(2,0,0); launch()', context);
+  assert.equal(vm.runInContext('flight.to.y', context), 1.05);
+  vm.runInContext('position.copy(flight.to); flight = null; landing.set(5,0,0); launch()', context);
+  assert.equal(vm.runInContext('flight.from.y', context), 1.05);
+  assert.equal(vm.runInContext('flight.to.y', context), 0);
+  vm.runInContext('flight = null; parkedCars[0].visible = false; landing.set(2,0,0); position.set(0,0,0); launch()', context);
+  assert.equal(vm.runInContext('flight.to.y', context), 0);
+});
+
+test("elevated cars aim on the ground with unchanged range and launch timing", () => {
+  const {context} = inputFixture();
+  vm.runInContext('showAim(new THREE.Vector3(3,0,0)); launch()', context);
+  const duration = vm.runInContext('flight.duration', context);
+  vm.runInContext('flight = null; position.y = 2; showAim(new THREE.Vector3(3,-2,0))', context);
+  assert.equal(vm.runInContext('landing.y === 0 && aim.position.y === 0 && landing.x === 3', context), true);
+  vm.runInContext('launch()', context);
+  assert.equal(vm.runInContext('flight.duration', context), duration);
+  assert.equal(vm.runInContext('flight.from.y', context), 2);
+  vm.runInContext('flight = null; showAim(new THREE.Vector3(20,-2,0))', context);
+  assert.equal(vm.runInContext('landing.x', context), 9);
+  vm.runInContext('showAim(new THREE.Vector3(0.1,-2,0)); launch()', context);
+  assert.equal(vm.runInContext('!aim.visible && flight === null', context), true);
+});
+
+test("keyboard aiming stays on the ground while roof compression changes car height", () => {
+  const {context, keys} = inputFixture();
+  vm.runInContext('position.y = 2', context);
+  keys.keydown({key: 'ArrowRight', preventDefault() {}});
+  vm.runInContext('updateKeyboardAim(0.25); position.y = 1.85; updateKeyboardAim(0.25)', context);
+  assert.equal(vm.runInContext('landing.y === 0 && aim.position.y === 0 && landing.x === 3', context), true);
 });

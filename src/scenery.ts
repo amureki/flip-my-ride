@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { vehicleShapes, type VehicleModel } from "./vehicles.ts";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 export function makeLotBase() {
@@ -24,46 +25,72 @@ export function makeLotBase() {
   return root;
 }
 
-export function makeParkedCar(color: number) {
+export function makeParkedCar(color: number, model: VehicleModel = "compact") {
+  const { body, roof, wheel: radius, axles } = vehicleShapes[model];
   const root = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.48, metalness: 0.12 });
   const glass = new THREE.MeshStandardMaterial({ color: 0x22343e, roughness: 0.25, metalness: 0.3 });
   const trim = new THREE.MeshStandardMaterial({ color: 0x242a2e, roughness: 0.85 });
   const silver = new THREE.MeshStandardMaterial({ color: 0x9ca6af, roughness: 0.4, metalness: 0.65 });
   for (const [w, h, d, y, z, material] of [
-    [1.45, 0.4, 2.65, 0.44, 0, paint],
-    [1.12, 0.4, 1.3, 0.8, 0.1, glass],
-    [1.14, 0.08, 0.9, 1.01, 0.18, paint],
-    [1.34, 0.14, 0.78, 0.64, -0.85, paint],
-    [1.35, 0.12, 0.48, 0.65, 1.02, paint],
-    [1.35, 0.065, 0.08, 0.3, -1.3, trim],
-    [1.35, 0.065, 0.08, 0.3, 1.3, trim],
+    [body.width, body.height - radius, body.length, (body.height + radius) / 2, 0, paint],
+    [roof.width, roof.height - body.height - 0.08, roof.length, (roof.height + body.height - 0.08) / 2, roof.z, glass],
+    [roof.width * 0.92, 0.08, roof.length * (model === "fastback" ? 0.55 : model === "compact" ? 0.72 : 0.88), roof.height - 0.04, roof.z, paint],
+    [body.width * 0.92, 0.08, 0.5, body.height - 0.04, -body.length / 2 + 0.26, paint],
+    [body.width * 0.92, 0.07, 0.4, body.height - 0.035, body.length / 2 - 0.21, paint],
+    [body.width * 0.92, 0.065, 0.08, radius, -body.length / 2, trim],
+    [body.width * 0.92, 0.065, 0.08, radius, body.length / 2, trim],
   ] as [number, number, number, number, number, THREE.Material][]) {
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(h / 3, 0.07)), material);
+    if (material === glass) {
+      const vertices = mesh.geometry.getAttribute("position");
+      for (let i = 0; i < vertices.count; i++) {
+        const rise = (vertices.getY(i) + h / 2) / h;
+        const taper = model === "fastback" ? 0.45 : model === "compact" ? 0.28 : 0.12;
+        vertices.setZ(i, vertices.getZ(i) * (1 - rise * taper));
+        vertices.setX(i, vertices.getX(i) * (1 - rise * 0.08));
+      }
+      mesh.geometry.computeVertexNormals();
+    }
     mesh.position.set(0, y, z);
     mesh.castShadow = mesh.receiveShadow = true;
     root.add(mesh);
   }
   for (const side of [-1, 1]) {
     const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.35, 0.065), trim);
-    pillar.position.set(side * 0.565, 0.8, 0.12);
+    pillar.scale.y = (roof.height - body.height) / 0.4;
+    pillar.position.set(side * (roof.width / 2 + 0.008), (roof.height + body.height) / 2, roof.z);
     root.add(pillar);
-    for (const z of [-0.83, 0.85]) {
-      for (const [radius, depth, x, material] of [
-        [0.3, 0.18, 0.68, trim], [0.205, 0.185, 0.68, silver],
-        [0.16, 0.188, 0.68, trim], [0.075, 0.19, 0.68, silver],
+    for (const z of axles) {
+      for (const [wheelRadius, depth, x, material] of [
+        [radius, 0.18, body.width / 2 - 0.09, trim], [radius * 0.68, 0.185, body.width / 2 - 0.09, silver],
+        [radius * 0.53, 0.188, body.width / 2 - 0.09, trim], [radius * 0.25, 0.19, body.width / 2 - 0.09, silver],
       ] as [number, number, number, THREE.Material][]) {
-        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 24), material);
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius, wheelRadius, depth, 24), material);
         wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(side * x, 0.3, z);
+        wheel.position.set(side * x, radius, z);
         wheel.castShadow = true;
         root.add(wheel);
       }
     }
-    for (const [z, color] of [[-1.329, 0xe4ebdf], [1.329, 0xb44b40]]) {
+    for (const [z, color] of [[-body.length / 2 - 0.009, 0xe4ebdf], [body.length / 2 + 0.009, 0xb44b40]]) {
       const light = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.018), new THREE.MeshBasicMaterial({ color }));
-      light.position.set(side * 0.43, 0.54, z);
+      light.position.set(side * body.width * 0.3, body.height - 0.1, z);
       root.add(light);
+    }
+  }
+  if (model === "semi") {
+    const cab = new THREE.Mesh(new RoundedBoxGeometry(roof.width, 0.9, roof.length, 2, 0.06), paint);
+    cab.position.set(0, body.height + 0.45, roof.z);
+    cab.castShadow = cab.receiveShadow = true;
+    root.add(cab);
+    const hitch = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 16), trim);
+    hitch.position.set(0, body.height + 0.05, 1.1);
+    root.add(hitch);
+    for (const side of [-1, 1]) {
+      const step = new THREE.Mesh(new RoundedBoxGeometry(0.18, 0.12, 0.65, 2, 0.03), silver);
+      step.position.set(side * (body.width / 2 - 0.09), 0.35, -0.8);
+      root.add(step);
     }
   }
   return root;

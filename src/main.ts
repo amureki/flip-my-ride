@@ -1,3 +1,4 @@
+import { vehicleLandingHeight, vehicleShapes } from "./vehicles";
 import { trackEvent } from "./analytics";
 import * as THREE from "three";
 import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
@@ -247,19 +248,23 @@ const trolley = makeTrolley();
 scene.add(trolley.root);
 const trolleyDamage = makeDamage(trolley.root, "trolley");
 let trolleyTime = 0;
-const parkedCars: THREE.Group[] = [];
-// Reuse scene objects across lots and retries instead of allocating new meshes.
 const carColors = [0xc78051, 0x5b7970, 0xe1b75f, 0x6383a3, 0xa66c70];
-for (
-  let i = 0;
-  i < Math.max(...levels.map((level) => level.cars.length));
-  i++
-) {
-  const parked = makeParkedCar(carColors[i % carColors.length]);
-  scene.add(parked);
-  parkedCars.push(parked);
+const parkedVehicles = levels.flatMap((level, lot) => level.cars.map(([x, z, model], index) => {
+  const root = makeParkedCar(carColors[index % carColors.length], model);
+  root.position.set(x, 0, z);
+  scene.add(root);
+  return { root, model, lot };
+}));
+const parkedCars = parkedVehicles.map(({ root }) => root);
+function obstacleHeight(x: number, z: number, halfWidth = 0.75, halfLength = 1.3) {
+  return parkedVehicles.reduce((height, { root, model }, index) => root.visible
+    ? Math.max(height, vehicleLandingHeight(model, x - root.position.x, z - root.position.z, halfWidth, halfLength, carDamage[index]?.roofDrop ?? 0, carDamage[index]?.bodyDrop ?? 0))
+    : height, 0);
 }
-const carDamage = parkedCars.map((parked) => makeDamage(parked, "car"));
+const carDamage = parkedVehicles.map(({ root, model }) => {
+  const { roof } = vehicleShapes[model];
+  return makeDamage(root, "car", roof.height, roof.z);
+});
 const { car, jets, sideJets, exhausts, suspension } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
 const contactShadow = makeContactShadow(scene);
@@ -421,9 +426,9 @@ function worldAt(x: number, y: number) {
   return out;
 }
 function showAim(delta: THREE.Vector3) {
-  delta.clampLength(0, 9);
-  landing.copy(position).add(delta);
-  if (position.distanceTo(landing) < 0.3) {
+  delta.setY(0).clampLength(0, 9);
+  landing.copy(position).setY(0).add(delta);
+  if (Math.hypot(position.x - landing.x, position.z - landing.z) < 0.3) {
     clearAim();
     message.textContent = keyboardAiming ? "Move the marker farther to flip." : "Drag farther to flip.";
     return;
@@ -442,11 +447,10 @@ function updateAimFeedback() {
   const outside =
     Math.abs(landing.x) > bounds.x - 0.8 ||
     Math.abs(landing.z) > bounds.z - 1.3;
-  const obstacle = parkedCars.some((other, index) => other.visible && !carDamage[index].damaged &&
-    Math.abs(landing.x - other.position.x) < 1.5 && Math.abs(landing.z - other.position.z) < 2.65) ||
+  const obstacle = obstacleHeight(landing.x, landing.z) > 0 ||
     cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6) ||
     (!trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
-      trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + position.distanceTo(landing) * 0.075), levels[levelIndex].trolley!));
+      trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + Math.hypot(position.x - landing.x, position.z - landing.z) * 0.075), levels[levelIndex].trolley!));
   const state = outside ? 2 : obstacle ? 1 : 0;
   const color = [0xfff5ce, 0xe9b657, 0xdc6839][state];
   (ring.material as THREE.MeshBasicMaterial).color.set(color);
@@ -469,7 +473,7 @@ function clearAim() {
 function launch(replayMove?: ReplayMove) {
   aimKeys.clear();
   keyboardAiming = false;
-  const distance = position.distanceTo(landing);
+  const distance = Math.hypot(position.x - landing.x, position.z - landing.z);
   clearAim();
   if (distance < 0.3 || won || flight) return;
   if (!replay) dismissRotationHint();
@@ -487,7 +491,7 @@ function launch(replayMove?: ReplayMove) {
   flipsLabel.textContent = String(flips);
   flight = {
     from: position.clone(),
-    to: landing.clone(),
+    to: landing.clone().setY(obstacleHeight(landing.x, landing.z)),
     time: 0,
     duration: replayMove?.duration ?? (reducedMotion.matches ? 0.8 : 1.15 + distance * 0.075),
     anticipation: replayMove?.anticipation ?? (reducedMotion.matches ? 0 : 0.12),
@@ -535,10 +539,8 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   start.set(level.start[0], 0, level.start[1]);
   target.set(level.target[0], 0, level.target[1]);
   parkingBay.position.copy(target);
-  parkedCars.forEach((parked, i) => {
-    const point = level.cars[i];
-    parked.visible = !!point;
-    if (point) parked.position.set(point[0], 0, point[1]);
+  parkedVehicles.forEach(({ root, lot }) => {
+    root.visible = lot === levelIndex;
   });
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
@@ -549,7 +551,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   document.querySelector<HTMLElement>("#share-score-label")!.hidden = !completedLastLot;
   position.copy(start);
   landing.copy(start);
-  pivot.position.copy(position).y = 0.5;
+  pivot.position.copy(position).y += 0.5;
   pivot.rotation.set(0, 0, 0);
   flips = 0;
   hits = 0;
@@ -603,8 +605,8 @@ function finishFlight() {
   } else {
     let crushed = false;
     parkedCars.forEach((other, index) => {
-      if (other.visible && Math.abs(position.x - other.position.x) < 1.5 &&
-          Math.abs(position.z - other.position.z) < 2.65 && carDamage[index].crush(reducedMotion.matches)) {
+      if (other.visible && vehicleLandingHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z) > 0) {
+        carDamage[index].crush(reducedMotion.matches);
         hits++;
         crushed = true;
       }
@@ -629,11 +631,11 @@ function finishFlight() {
         message.textContent = "That cone had a family.";
       }
   }
-  pivot.position.copy(position).y = 0.5;
+  pivot.position.copy(position).y += 0.5;
   touchdown = 0;
   jets.visible = false;
   sideJets.visible = false;
-  shockwave.position.copy(position).y = 0.05;
+  shockwave.position.copy(position).y += 0.05;
   if (hits === previousHits)
     message.textContent = clearedCar
       ? "Traffic avoided. Parking still required."
@@ -642,6 +644,7 @@ function finishFlight() {
     reducedMotion.matches ? 0.25 : 0.35 + landingStrength * 0.5);
   // Require the complete upright car footprint to fit inside the parking bay.
   if (
+    position.y === 0 &&
     Math.abs(position.x - target.x) <= 0.51 &&
     Math.abs(position.z - target.z) <= 0.68
   ) {
@@ -701,7 +704,7 @@ for (const surface of [stage, thumbPad]) {
     pointerSurface = surface;
     pointer = event.pointerId;
     clearAim();
-    landing.copy(position);
+    landing.copy(position).setY(0);
     thumbPad.style.setProperty("--thumb-x", "0px");
     thumbPad.style.setProperty("--thumb-y", "0px");
     thumbPad.classList.toggle("aiming", surface === thumbPad);
@@ -776,7 +779,7 @@ window.addEventListener("keydown", (event) => {
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"].includes(event.key.toLowerCase())) {
     event.preventDefault();
     if (!keyboardAiming) {
-      if (!aim.visible) landing.copy(position);
+      if (!aim.visible) landing.copy(position).setY(0);
       keyboardAiming = true;
     }
     aimKeys.add(event.key.toLowerCase());
@@ -909,7 +912,7 @@ function endReplay() {
   trolley.root.position.copy(current.completed.trolleyPosition);
   trolley.root.rotation.copy(current.completed.trolleyRotation);
   position.copy(current.completed.position);
-  pivot.position.copy(position).y = 0.5;
+  pivot.position.copy(position).y += 0.5;
   flips = current.completed.flips;
   hits = current.completed.hits;
   won = true;
@@ -1015,14 +1018,11 @@ renderer.setAnimationLoop((now: number) => {
     );
     pivot.position.lerpVectors(flight.from, flight.to, t);
     pivot.position.y =
-      0.5 + Math.pow(Math.sin(t * Math.PI), 0.8) * flight.height;
-    if (!flight.clearedCar && pivot.position.y > 2)
-      flight.clearedCar = parkedCars.some(
-        (other) =>
-          other.visible &&
-          Math.abs(pivot.position.x - other.position.x) < 0.75 &&
-          Math.abs(pivot.position.z - other.position.z) < 1.35,
-      );
+      0.5 + THREE.MathUtils.lerp(flight.from.y, flight.to.y, t) + Math.pow(Math.sin(t * Math.PI), 0.8) * flight.height;
+    if (!flight.clearedCar) {
+      const roof = obstacleHeight(pivot.position.x, pivot.position.z, 0, 0);
+      flight.clearedCar = roof > 0 && pivot.position.y - 0.5 > roof;
+    }
     const rotationProgress = THREE.MathUtils.smootherstep(t, 0.07, 0.93);
     pivot.rotation.set(
       reducedMotion.matches ? 0 : Math.sin(t * Math.PI) * 0.65,
@@ -1070,6 +1070,10 @@ renderer.setAnimationLoop((now: number) => {
   }
   carDamage.forEach((damage) => damage.update(dt, reducedMotion.matches));
   trolleyDamage.update(dt, reducedMotion.matches);
+  if (!flight && position.y > 0) {
+    position.y = obstacleHeight(position.x, position.z);
+    pivot.position.y = position.y + 0.5;
+  }
   contactShadow.update(pivot);
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
