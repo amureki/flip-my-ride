@@ -26,7 +26,7 @@ export const levels: readonly Level[] = [
     hint: "One space to the right. Try not to launch into orbit.",
     start: [-6.3, 4.8],
     target: [-3.3, 4.8],
-    sign: [-9.15, 0],
+    sign: [-9.15, 4.5],
     signText: ["NO", "KICKFLIPS"],
     signReply: "Please don’t.",
     cars: [
@@ -45,7 +45,7 @@ export const levels: readonly Level[] = [
     hint: "One free space. Getting there without a claim is the hard part.",
     start: [-6.3, 0],
     target: [2.7, -4.9],
-    sign: [-9.15, 0],
+    sign: [-9.15, 4.5],
     signText: ["LOT", "FULL"],
     signReply: "Full of it.",
     cars: [
@@ -71,7 +71,7 @@ export const levels: readonly Level[] = [
     hint: "The trolley has right of way. Your insurance recommends respecting it.",
     start: [-5.5, 4.8],
     target: [4.2, -3.7],
-    sign: [-9.15, 2.9],
+    sign: [-9.15, 4.5],
     signText: ["CART", "BLANCHE"],
     signReply: "Cart-astrophe.",
     cars: [
