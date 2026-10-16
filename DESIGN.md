@@ -38,7 +38,7 @@ Watch replay uses a secondary button below the social sharing row. Playback keep
 
 ## Parking jokes
 
-A small NO KICKFLIPS sign stands behind the target bay. Launch captions respond to jump power; landing captions respond to clearing a parked car or filing a claim, with collisions taking priority. The completion overlay shows flips, claims filed, and one short pun.
+A small sign with a different joke for each lot stands in a reachable side area, away from the target bay. Launch captions respond to jump power; landing captions respond to clearing a parked car or filing a claim, with collisions taking priority. The completion overlay shows flips, claims filed, and one short pun.
 
 ## Lots
 
@@ -71,3 +71,9 @@ The result uses a compact score section and a separate action section. Aligned r
 ## Social preview
 
 The 1200 × 630 social card uses the actual procedural Roadster model above a green parking bay, on a warm off-white background (#f3f0e9). The car and bay fill the right side, enlarged 35% from the original composition. The fixed-size card uses an 88px bold Arial title and a 42px tagline; these sizes are specific to the exported image. A black title and the existing “No driving. Only flips.” tagline sit at the left, close to the car. Footer labels are omitted. The reproducible composition lives in `assets/og-image.html`. No generated photography, smoke trails, or advertising-style lettering.
+
+## Optional discoveries
+
+Each lot defines its sign text, hidden reply, and sign position with a clear landing within one flip of the start, away from the goal, and has at least one cone. Landing near the sign folds it down and reveals a smaller reply. The four pairs are NO KICKFLIPS / “Please don’t.”, LOT FULL / “Full of it.”, CART BLANCHE / “Cart-astrophe.”, and LAST CHANCE / “You blew it.” Each distinct sign reply can trigger its own discovery banner once per run. The first cone hit gives the Roadster a cone hat, retained through subsequent flips. Contact with a parked car shows small, camera-facing “beep!” speech bubbles alternating above that car and the Roadster. First contact gets one exchange; a second landing on the same car gets two exchanges. Each bubble lasts 0.7 seconds with a short gap, without bouncing or sound. The bubbles follow the cars and clear on Retry, results, and replay. Discovery captions remain available to screen readers. Wrecks do not add repeat claims. These discoveries do not gate parking or change the required route.
+
+A small off-white discovery banner uses 13px text beneath the lot information, stays for 3.5 seconds, and queues simultaneous discoveries. It does not capture input or animate. Each caption appears once per four-lot run, including across retries. All discoveries are silent; there is no audio control. Retry and lot changes reset props and pending effects. Replay reconstructs the props silently and restores the completed state when exited.

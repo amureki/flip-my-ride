@@ -83,6 +83,7 @@ test("exiting replay restores the completed score, damage, controls and replay h
     const pivot = new THREE.Group(), cones = [{mesh: new THREE.Group(), hit: true}];
     const flipsLabel = {}, message = {textContent: 'Parked.'};
     const result = new HTMLElement(), watchReplay = new HTMLElement(), stopReplay = new HTMLElement();
+    const easterEggs = { snapshot: () => ({sign: true, hat: true, contacts: [2]}), restore(saved) { this.restored = saved; } };
     function updateShareLinks() {}
     function levelEvent() {}
     function reset() {
@@ -99,6 +100,7 @@ test("exiting replay restores the completed score, damage, controls and replay h
   assert.equal(trolleyDamage.damaged, false);
   vm.runInContext("trolley.root.position.set(8, 0, 8); endReplay()", context);
   assert.equal(vm.runInContext("won && flips === 4 && hits === 3 && moves.length === 1 && position.x === 3 && message.textContent === 'Parked.'", context), true);
+  assert.equal(vm.runInContext("easterEggs.restored.sign && easterEggs.restored.hat && easterEggs.restored.contacts[0] === 2", context), true);
   assert.equal(trolleyDamage.damaged, true);
   assert.equal(carDamage[0].damaged, true);
   assert.deepEqual(trolley.root.position.toArray(), [1, 0, 2]);

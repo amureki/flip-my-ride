@@ -1,3 +1,4 @@
+import { makeEasterEggs, type EggState } from "./easter-eggs";
 import { vehicleLandingHeight, vehicleShapes } from "./vehicles";
 import { trackEvent } from "./analytics";
 import * as THREE from "three";
@@ -36,7 +37,7 @@ type ReplaySession = {
   moves: ReplayMove[];
   index: number;
   endHold: number;
-  completed: { carDamage: boolean[]; trolleyDamage: boolean; trolleyPosition: THREE.Vector3; trolleyRotation: THREE.Euler; trolleyTime: number; position: THREE.Vector3; flips: number; hits: number; message: string; cones: { position: THREE.Vector3; rotation: THREE.Euler; hit: boolean }[] };
+  completed: { eggs: EggState; carDamage: boolean[]; trolleyDamage: boolean; trolleyPosition: THREE.Vector3; trolleyRotation: THREE.Euler; trolleyTime: number; position: THREE.Vector3; flips: number; hits: number; message: string; cones: { position: THREE.Vector3; rotation: THREE.Euler; hit: boolean }[] };
 };
 let replay: ReplaySession | null = null;
 
@@ -194,28 +195,12 @@ p.rotation.x = -Math.PI / 2;
 p.position.set(0, 0.04, 0);
 parkingBay.add(p);
 const sign = new THREE.Group();
-sign.position.set(4.2, 0, -6.9);
+sign.position.set(levels[0].sign[0], 0, levels[0].sign[1]);
 sign.rotation.y = 0.2;
 const signCanvas = document.createElement("canvas");
 signCanvas.width = 768;
 signCanvas.height = 640;
 const signContext = signCanvas.getContext("2d")!;
-signContext.fillStyle = "#f8f7f1";
-signContext.beginPath();
-signContext.roundRect(0, 0, 768, 640, 40);
-signContext.fill();
-signContext.strokeStyle = "#b52624";
-signContext.lineWidth = 18;
-signContext.beginPath();
-signContext.roundRect(25, 25, 718, 590, 24);
-signContext.stroke();
-signContext.textAlign = "center";
-signContext.fillStyle = "#b52624";
-signContext.font = "bold 184px Arial";
-signContext.fillText("NO", 384, 288);
-signContext.fillStyle = "#20252c";
-signContext.font = "bold 109px Arial";
-signContext.fillText("KICKFLIPS", 384, 442);
 const signTexture = new THREE.CanvasTexture(signCanvas);
 signTexture.colorSpace = THREE.SRGBColorSpace;
 signTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -337,6 +322,7 @@ for (const [x, z] of [
   scene.add(cone);
   cones.push({ mesh: cone, hit: false });
 }
+const easterEggs = makeEasterEggs(sign, car, cones[0].mesh, parkedCars);
 for (const [index, [x, z]] of [
   [-9.7, -7.5], [9.7, 6.3], [-9.5, 7.5], [8.9, -8.6],
 ].entries()) {
@@ -530,6 +516,25 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   if (reason === "retry" && attemptStarted) levelEvent("level_retried", { completed: won });
   if (reason !== "replay") attemptStarted = false;
   if (reason === "next") attempt = 0;
+  sign.position.set(levels[levelIndex].sign[0], 0, levels[levelIndex].sign[1]);
+  signContext.fillStyle = "#f8f7f1";
+  signContext.beginPath();
+  signContext.roundRect(0, 0, 768, 640, 40);
+  signContext.fill();
+  signContext.strokeStyle = "#b52624";
+  signContext.lineWidth = 18;
+  signContext.beginPath();
+  signContext.roundRect(25, 25, 718, 590, 24);
+  signContext.stroke();
+  signContext.textAlign = "center";
+  signContext.fillStyle = "#b52624";
+  signContext.font = "bold 184px Arial";
+  signContext.fillText(levels[levelIndex].signText[0], 384, 288, 670);
+  signContext.fillStyle = "#20252c";
+  signContext.font = "bold 109px Arial";
+  signContext.fillText(levels[levelIndex].signText[1], 384, 442, 670);
+  signTexture.needsUpdate = true;
+  easterEggs.reset(reason === "initial" || (reason === "next" && levelIndex === 0), levels[levelIndex].signReply);
   roundTime = 0;
   moves = [];
   cancelInput();
@@ -616,10 +621,13 @@ function finishFlight() {
       "Out of bounds. Returned to your last questionable decision.";
   } else {
     let crushed = false;
+    const touchedCars: number[] = [];
+    let hitCone = false;
     parkedCars.forEach((other, index) => {
       if (other.visible && vehicleLandingHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z) > 0) {
+        touchedCars.push(index);
+        if (!carDamage[index].damaged) hits++;
         carDamage[index].crush(reducedMotion.matches);
-        hits++;
         crushed = true;
       }
     });
@@ -637,11 +645,13 @@ function finishFlight() {
         Math.abs(position.x - cone.mesh.position.x) < 1.05 &&
         Math.abs(position.z - cone.mesh.position.z) < 1.6
       ) {
+        hitCone = true;
         cone.hit = true;
         hits++;
         cone.mesh.scale.set(1.3, 0.12, 1.3);
         message.textContent = "That cone had a family.";
       }
+    easterEggs.land(position.x, position.z, touchedCars, hitCone, !!replay);
   }
   pivot.position.copy(position).y += 0.5;
   touchdown = 0;
@@ -916,6 +926,7 @@ function endReplay() {
   const current = replay;
   replay = null;
   reset("replay");
+  easterEggs.restore(current.completed.eggs);
   moves = current.moves;
   trolleyTime = current.completed.trolleyTime;
   if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
@@ -949,7 +960,7 @@ function beginReplay() {
   if (!won || replay || !moves.length) return;
   const current: ReplaySession = {
     moves: moves.slice(), index: 0, endHold: 0,
-    completed: { carDamage: carDamage.map((damage) => damage.damaged), trolleyDamage: trolleyDamage.damaged, trolleyPosition: trolley.root.position.clone(), trolleyRotation: trolley.root.rotation.clone(), trolleyTime, position: position.clone(), flips, hits, message: message.textContent ?? "",
+    completed: { eggs: easterEggs.snapshot(), carDamage: carDamage.map((damage) => damage.damaged), trolleyDamage: trolleyDamage.damaged, trolleyPosition: trolley.root.position.clone(), trolleyRotation: trolley.root.rotation.clone(), trolleyTime, position: position.clone(), flips, hits, message: message.textContent ?? "",
       cones: cones.map((cone) => ({ position: cone.mesh.position.clone(), rotation: cone.mesh.rotation.clone(), hit: cone.hit })) },
   };
   levelEvent("replay_started");
@@ -1089,6 +1100,7 @@ renderer.setAnimationLoop((now: number) => {
   brakeLight.emissiveIntensity = !flight && touchdown < 1 ? 0.55 + 0.65 * (1 - touchdown) : 0.35;
   contactShadow.update(pivot, obstacleHeight(pivot.position.x, pivot.position.z));
   exhaust.update(dt, !reducedMotion.matches);
+  easterEggs.update(dt, won || !!replay);
   renderer.render(scene, camera);
 
 });

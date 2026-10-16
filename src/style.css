@@ -700,3 +700,19 @@ button:disabled {
     margin-inline: auto;
   }
 }
+
+#discovery {
+  position: absolute;
+  top: max(140px, calc(env(safe-area-inset-top) + 124px));
+  left: 16px;
+  max-width: calc(100% - 32px);
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: #f8f7f1;
+  color: #20252c;
+  font-size: 13px;
+  pointer-events: none;
+}
+@media (max-height: 500px) {
+  #discovery { top: 80px; }
+}

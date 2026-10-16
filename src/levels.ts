@@ -8,6 +8,9 @@ export type Level = {
   hint: string;
   start: Point;
   target: Point;
+  sign: Point;
+  signText: readonly [string, string];
+  signReply: string;
   cars: readonly (readonly [x: number, z: number, model: VehicleModel])[];
   cones: readonly Point[];
   trolley?: TrolleyRoute;
@@ -19,6 +22,9 @@ export const levels: readonly Level[] = [
     hint: "One space to the right. Try not to launch into orbit.",
     start: [-6.3, 4.8],
     target: [-3.3, 4.8],
+    sign: [-6.8, -1.3],
+    signText: ["NO", "KICKFLIPS"],
+    signReply: "Please don’t.",
     cars: [
       [-0.3, 4.8, "compact"],
       [2.7, 4.8, "fastback"],
@@ -27,13 +33,16 @@ export const levels: readonly Level[] = [
       [-0.3, -4.9, "fastback"],
       [5.7, -4.9, "suv"],
     ],
-    cones: [],
+    cones: [[-6.8, 1.8]],
   },
   {
     name: "Full Lot",
     hint: "One free space. Getting there without a claim is the hard part.",
     start: [-6.3, 0],
     target: [2.7, -4.9],
+    sign: [-6.8, -1.3],
+    signText: ["LOT", "FULL"],
+    signReply: "Full of it.",
     cars: [
       [-6.3, -4.9, "compact"],
       [-3.3, -4.9, "fastback"],
@@ -48,7 +57,7 @@ export const levels: readonly Level[] = [
       [2.7, 0, "fastback"],
       [5.7, 0, "suv"],
     ],
-    cones: [],
+    cones: [[-6.8, 1.8]],
   },
   {
     name: "Unexpected Item",
@@ -56,6 +65,9 @@ export const levels: readonly Level[] = [
     hint: "The trolley has right of way. Your insurance recommends respecting it.",
     start: [-5.5, 4.8],
     target: [4.2, -3.7],
+    sign: [-4, 0.8],
+    signText: ["CART", "BLANCHE"],
+    signReply: "Cart-astrophe.",
     cars: [
       [-6.3, -3.9, "semi"],
       [-3.3, -4.9, "fastback"],
@@ -74,11 +86,14 @@ export const levels: readonly Level[] = [
     hint: "The last space. Can you reach it without flattening the lot?",
     start: [-6, 5],
     target: [6, -5],
+    sign: [-6.8, -1.3],
+    signText: ["LAST", "CHANCE"],
+    signReply: "You blew it.",
     cars: [
       [-6, -5, "compact"], [-3, -5, "fastback"], [3, -5, "suv"],
       [-3, 0, "compact"], [0, 0, "fastback"], [3, 0, "suv"], [6, 1.3, "compact"],
       [-3, 5, "fastback"], [0, 5, "suv"], [3, 5, "compact"], [6, 5, "fastback"],
     ],
-    cones: [],
+    cones: [[-6.8, 1.8]],
   },
 ];
