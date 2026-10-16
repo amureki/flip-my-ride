@@ -19,3 +19,8 @@ export function licenceVerdict(hits: number) {
 export function meetsCleanPar(score: Pick<RoundScore, "flips" | "hits">, par: number) {
   return score.hits === 0 && score.flips <= par;
 }
+
+export function bestRound(previous: RoundScore, attempt: RoundScore): RoundScore {
+  return attempt.hits < previous.hits || (attempt.hits === previous.hits && attempt.flips < previous.flips)
+    ? attempt : previous;
+}

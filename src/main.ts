@@ -13,7 +13,7 @@ import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { levels } from "./levels";
 import { makeTrolley, hitsTrolley, trolleyPosition } from "./trolley";
-import { runTotal, licenceVerdict, meetsCleanPar, type RoundScore } from "./receipt";
+import { runTotal, licenceVerdict, meetsCleanPar, bestRound, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
 type ReplayMove = {
   drivers: DriverState[];
@@ -652,7 +652,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   signContext.font = "bold 109px Arial";
   signContext.fillText(levels[levelIndex].signText[1], 384, 442, 670);
   signTexture.needsUpdate = true;
-  easterEggs.reset(reason === "initial" || (reason === "next" && levelIndex === 0), levels[levelIndex].signReply);
+  easterEggs.reset(reason === "initial" || (reason === "next" && levelIndex === 0 && !gameCompleted), levels[levelIndex].signReply);
   roundTime = 0;
   moves = [];
   cancelInput();
@@ -683,7 +683,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
   document.querySelector("#par-goal")!.textContent = `Clean par: ≤${level.par} ${level.par === 1 ? "flip" : "flips"} · 0 claims`;
-  const completedLastLot = levelIndex === levels.length - 1;
+  const completedLastLot = gameCompleted || levelIndex === levels.length - 1;
   nextButton.textContent = completedLastLot ? "Play again" : "Next lot";
   nextButton.classList.toggle("secondary", completedLastLot);
   result.classList.toggle("final-lot", completedLastLot);
@@ -792,14 +792,15 @@ function finishFlight() {
   ) {
     won = true;
     if (replay) return;
-    roundScores[levelIndex] = {
+    const attemptScore: RoundScore = {
       flips, hits,
       cars: carDamage.filter((damage, index) => parkedCars[index].visible && damage.damaged).length,
       trolleys: trolleyDamage.damaged ? 1 : 0,
       cones: cones.filter((cone) => cone.mesh.visible && cone.hit).length,
     };
-    const final = levelIndex === levels.length - 1;
-    levelEvent("level_completed", roundScores[levelIndex]);
+    roundScores[levelIndex] = gameCompleted ? bestRound(roundScores[levelIndex], attemptScore) : attemptScore;
+    const final = gameCompleted || levelIndex === levels.length - 1;
+    levelEvent("level_completed", attemptScore);
     if (final && !gameCompleted) {
       trackEvent("game_completed", { ...runTotal(roundScores), levels: levels.length });
       gameCompleted = true;
@@ -816,6 +817,17 @@ function finishFlight() {
       const name = document.createElement("th");
       name.scope = "row";
       name.textContent = `${i + 1}. ${levels[i].name}`;
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.className = "retry-level";
+      retry.setAttribute("aria-label", `Retry level ${i + 1}: ${levels[i].name}`);
+      retry.addEventListener("click", () => {
+        levelIndex = i;
+        reset("next");
+        stage.focus({ preventScroll: true });
+      });
+      name.append(document.createElement("br"), retry);
       row.append(name);
       row.insertCell().textContent = String(round.flips);
       row.insertCell().textContent = String(round.hits);
@@ -842,11 +854,11 @@ function finishFlight() {
       ? "All hail the Cone-queror. Long may you park."
       : "Thank you for parking with a twist.";
     message.textContent =
-      levelIndex === levels.length - 1
+      final
         ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
         : "The future of parallel parking.";
     updateShareLinks();
-    const primaryAction = levelIndex === levels.length - 1
+    const primaryAction = final
       ? result.querySelector<HTMLAnchorElement>("[data-social]")!
       : nextButton;
     primaryAction.focus({ preventScroll: true });
@@ -993,7 +1005,7 @@ document.querySelector("#again")!.addEventListener("click", () => {
 });
 nextButton.addEventListener("click", () => {
   if (!won) return;
-  levelIndex = (levelIndex + 1) % levels.length;
+  levelIndex = gameCompleted ? 0 : (levelIndex + 1) % levels.length;
   if (levelIndex === 0) {
     roundScores.length = 0;
     gameStarted = false;
@@ -1004,7 +1016,7 @@ nextButton.addEventListener("click", () => {
 });
 function currentShareContent() {
   const score = !won ? undefined
-    : levelIndex === levels.length - 1
+    : gameCompleted
       ? { ...runTotal(roundScores), completedLots: levels.length }
       : { flips, hits, lot: levels[levelIndex].name };
   return shareContent(location.href, score);

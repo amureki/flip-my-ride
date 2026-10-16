@@ -32,3 +32,18 @@ test("clean par requires zero claims and respects the flip budget", () => {
   assert.equal(meetsCleanPar({flips: 4, hits: 0}, 3), false);
   assert.equal(meetsCleanPar({flips: 2, hits: 1}, 3), false);
 });
+
+test("level retries keep the best score, preferring clean parking over fewer flips", async () => {
+  const { bestRound } = await import('../src/receipt.ts');
+  const clean = {flips:4,hits:0,cars:0,trolleys:0,cones:0};
+  const crash = {flips:2,hits:1,cars:1,trolleys:0,cones:0};
+  assert.equal(bestRound(clean, crash), clean);
+  assert.equal(bestRound(crash, clean), clean);
+  const improved = {...clean, flips:3};
+  assert.equal(bestRound(clean, improved), improved);
+  assert.equal(bestRound(improved, clean), improved);
+  const rounds = Array.from({length:7}, () => clean);
+  rounds[2] = bestRound(rounds[2], improved);
+  assert.equal(runTotal(rounds).flips, 27);
+  assert.ok(rounds.every((round,i) => round === (i === 2 ? improved : clean)));
+});

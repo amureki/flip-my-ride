@@ -786,3 +786,7 @@ button:disabled {
 #receipt-levels th:first-child { text-align: left; width: 44%; }
 #receipt-levels tbody th { font-weight: normal; }
 #receipt-levels td { font-variant-numeric: tabular-nums; }
+
+#receipt-levels .retry-level { display: inline-block; width: auto; min-height: 32px; margin: 3px 0 0; padding: 4px 10px; font-size: 12px; }
+
+#receipt-levels caption small { display: block; margin-top: 4px; font-weight: normal; }
