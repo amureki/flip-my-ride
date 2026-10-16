@@ -20,10 +20,10 @@ export function makeContactShadow(scene: THREE.Scene) {
   const geometry = new THREE.PlaneGeometry(1, 1);
   for (const [x, z, width, length] of [
     [0, 0, 2.2, 3.2],
-    [-0.74, -0.85, 0.55, 0.7],
-    [0.74, -0.85, 0.55, 0.7],
-    [-0.74, 0.85, 0.55, 0.7],
-    [0.74, 0.85, 0.55, 0.7],
+    [-0.61, -0.85, 0.55, 0.7],
+    [0.61, -0.85, 0.55, 0.7],
+    [-0.61, 0.85, 0.55, 0.7],
+    [0.61, 0.85, 0.55, 0.7],
   ]) {
     const patch = new THREE.Mesh(geometry, material);
     patch.rotation.x = -Math.PI / 2;
