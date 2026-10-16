@@ -523,6 +523,24 @@ button:disabled {
   display: none;
 }
 @media (pointer: coarse) {
+  header nav {
+    display: none;
+  }
+  header h1 {
+    max-width: none;
+    font-size: 18px;
+  }
+  header .score {
+    font-size: 14px;
+  }
+  #reset {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 14px;
+  }
+  #reset kbd {
+    display: none;
+  }
   #app {
     --pad-height: 128px;
     --controls-height: calc(var(--pad-height) + 48px + env(safe-area-inset-bottom));
@@ -545,7 +563,7 @@ button:disabled {
     grid-row: 1 / 4;
     min-height: 0;
     align-items: center;
-    font-size: 12px;
+    font-size: 16px;
   }
   .instructions .power {
     grid-column: 3;
@@ -558,6 +576,7 @@ button:disabled {
     grid-row: 1 / 3;
     margin: 0 auto;
     max-width: 20ch;
+    font-size: 14px;
   }
   .instructions .game-credit {
     grid-column: 1 / -1;

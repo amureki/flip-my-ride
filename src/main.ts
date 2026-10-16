@@ -932,9 +932,13 @@ document.addEventListener("visibilitychange", () => {
 function resize() {
   const { width, height } = stage.getBoundingClientRect();
   const aspect = width / height;
-  // Mobile framing trims decorative scenery while keeping the playable lot visible.
+  // Preserve the diagonal view while trimming mobile framing to the lot edges.
+  // Framing depends only on viewport size, so aiming and flight never move it.
+  camera.position.set(14, 20, 22);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();
   const halfHeight = mobileControls.matches
-    ? Math.max(9.5, 11.8 / aspect)
+    ? Math.max(8, 11.1 / aspect)
     : Math.max(12, 15 / aspect);
   camera.left = -halfHeight * aspect;
   camera.right = halfHeight * aspect;
@@ -946,6 +950,7 @@ function resize() {
   renderer.setSize(width, height);
 }
 new ResizeObserver(resize).observe(stage);
+mobileControls.addEventListener("change", resize);
 resize();
 reset("initial");
 let last = performance.now();
