@@ -26,7 +26,22 @@ npm run build
 npm run preview
 ```
 
-Upload `dist/` to a static host. There is no backend, telemetry, account system, remote font request, or external asset service. Vite uses relative asset URLs, including for GitHub project subpaths.
+Upload `dist/` to a static host. There is no backend, account system, remote font request, or external asset service. Vite uses relative asset URLs, including for GitHub project subpaths.
+
+### Analytics
+
+Umami loads from `https://t.rsts.me/script.js` only on the exact hostname `flip.amureki.me`. Local development, preview domains, and other hosts do not load the tracker.
+
+To exclude your visits, open https://flip.amureki.me/ and run this in the DevTools console:
+
+```js
+localStorage.setItem('umami.disabled', '1');
+location.reload();
+```
+
+Run this once in each browser profile and device. It excludes future visits; it does not remove visits already recorded. Clearing site data or using a new private session removes the exclusion. Browsers that block local storage are not tracked.
+
+To enable tracking again, run `localStorage.removeItem('umami.disabled')` in the site's browser console and reload.
 
 ### GitHub Pages
 
