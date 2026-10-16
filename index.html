@@ -296,7 +296,12 @@
           Drag to aim. Release to flip. Land in green.
         </div>
         <div class="power" aria-hidden="true"><i id="power-fill"></i></div>
-        <p>Drag and release · Arrows/WASD move marker · Space flips <span>· R retries</span></p>
+        <p class="desktop-hint">Drag and release · Arrows/WASD move marker · Space flips <span>· R retries</span></p>
+        <p class="mobile-hint" id="thumb-hint">Drag on the pad to aim · Release to flip</p>
+        <div id="thumb-pad" role="group" aria-label="Thumb pad" aria-describedby="thumb-hint">
+          <span class="thumb-origin" aria-hidden="true"></span>
+          <span class="thumb-knob" aria-hidden="true"></span>
+        </div>
         <small>Unofficial Roadster parody</small>
       </div>
     </main>

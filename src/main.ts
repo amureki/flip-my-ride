@@ -19,6 +19,9 @@ let shareVersion = 0;
 let sharing = false;
 
 const stage = document.querySelector<HTMLDivElement>("#stage")!;
+const thumbPad = document.querySelector<HTMLDivElement>("#thumb-pad")!;
+const mobileControls = matchMedia("(pointer: coarse)");
+let pointerSurface: HTMLElement = stage;
 const message = document.querySelector<HTMLDivElement>("#message")!;
 const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
 const powerFill = document.querySelector<HTMLElement>("#power-fill")!;
@@ -437,9 +440,7 @@ function launch() {
         : "The sign is more of a suggestion.";
 }
 function reset() {
-  if (pointer !== null && stage.hasPointerCapture(pointer))
-    stage.releasePointerCapture(pointer);
-  pointer = null;
+  cancelInput();
   aimKeys.clear();
   keyboardAiming = false;
   flight = null;
@@ -611,51 +612,79 @@ function finishFlight() {
     primaryAction.focus({ preventScroll: true });
   }
 }
-stage.addEventListener("pointerdown", (event) => {
-  if (
-    (event.target as HTMLElement).closest("button, input") ||
-    flight ||
-    won ||
-    pointer !== null ||
-    (event.pointerType === "mouse" && event.button !== 0)
-  )
-    return;
-  aimKeys.clear();
-  keyboardAiming = false;
-  pointer = event.pointerId;
-  dragStart.set(event.clientX, event.clientY);
-  stage.setPointerCapture(pointer);
-  stage.focus({ preventScroll: true });
-});
-stage.addEventListener("pointermove", (event) => {
-  if (event.pointerId !== pointer) return;
-  showAim(
-    worldAt(event.clientX, event.clientY).sub(
-      worldAt(dragStart.x, dragStart.y),
-    ),
-  );
-});
-stage.addEventListener("pointerup", (event) => {
-  if (event.pointerId !== pointer) return;
-  showAim(
-    worldAt(event.clientX, event.clientY).sub(
-      worldAt(dragStart.x, dragStart.y),
-    ),
-  );
-  stage.releasePointerCapture(event.pointerId);
-  pointer = null;
-  launch();
-});
+for (const surface of [stage, thumbPad]) {
+  surface.addEventListener("pointerdown", (event) => {
+    if (
+      (event.target as HTMLElement).closest("button, input") ||
+      (surface === stage && mobileControls.matches && event.pointerType !== "mouse") ||
+      flight ||
+      won ||
+      pointer !== null ||
+      (event.pointerType === "mouse" && event.button !== 0)
+    )
+      return;
+    aimKeys.clear();
+    keyboardAiming = false;
+    pointerSurface = surface;
+    pointer = event.pointerId;
+    clearAim();
+    landing.copy(position);
+    thumbPad.style.setProperty("--thumb-x", "0px");
+    thumbPad.style.setProperty("--thumb-y", "0px");
+    thumbPad.classList.toggle("aiming", surface === thumbPad);
+    dragStart.set(event.clientX, event.clientY);
+    surface.setPointerCapture(pointer);
+    stage.focus({ preventScroll: true });
+  });
+  surface.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== pointer) return;
+    updatePointerAim(event);
+  });
+  surface.addEventListener("pointerup", (event) => {
+    if (event.pointerId !== pointer) return;
+    updatePointerAim(event);
+    pointer = null;
+    surface.releasePointerCapture(event.pointerId);
+    thumbPad.classList.remove("aiming");
+    launch();
+  });
+  surface.addEventListener("pointercancel", cancelInput);
+  surface.addEventListener("lostpointercapture", () => {
+    if (pointer !== null) cancelInput();
+  });
+}
+function updatePointerAim(event: PointerEvent) {
+  const dx = event.clientX - dragStart.x;
+  const dy = event.clientY - dragStart.y;
+  const delta = worldAt(event.clientX, event.clientY).sub(worldAt(dragStart.x, dragStart.y));
+  if (pointerSurface === thumbPad) {
+    const radius = Math.min(thumbPad.clientWidth, thumbPad.clientHeight) / 2 - 16;
+    const distance = Math.hypot(dx, dy);
+    // Pad coordinates can lie beyond the camera's ground projection.
+    const rect = stage.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    delta.copy(worldAt(centerX + dx / (distance || 1), centerY + dy / (distance || 1)))
+      .sub(worldAt(centerX, centerY))
+      .normalize().multiplyScalar(Math.min(distance / radius, 1) * 9);
+    const scale = distance > radius ? radius / distance : 1;
+    thumbPad.style.setProperty("--thumb-x", `${dx * scale}px`);
+    thumbPad.style.setProperty("--thumb-y", `${dy * scale}px`);
+  }
+  showAim(delta);
+}
 function cancelInput() {
+  const captured = pointer;
   pointer = null;
+  if (captured !== null && pointerSurface.hasPointerCapture(captured))
+    pointerSurface.releasePointerCapture(captured);
+  thumbPad.classList.remove("aiming");
   aimKeys.clear();
   keyboardAiming = false;
   clearAim();
 }
-stage.addEventListener("pointercancel", cancelInput);
-stage.addEventListener("lostpointercapture", () => {
-  if (pointer !== null) cancelInput();
-});
+mobileControls.addEventListener("change", cancelInput);
+window.addEventListener("resize", cancelInput);
 window.addEventListener("blur", cancelInput);
 window.addEventListener("keydown", (event) => {
   if (event.target instanceof HTMLInputElement) return;

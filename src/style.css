@@ -474,3 +474,85 @@ button:disabled {
     white-space: nowrap;
   }
 }
+
+#thumb-pad,
+.mobile-hint {
+  display: none;
+}
+@media (pointer: coarse) {
+  #app {
+    --pad-height: 160px;
+    --controls-height: calc(var(--pad-height) + 110px + env(safe-area-inset-bottom));
+  }
+  #stage {
+    top: max(90px, calc(env(safe-area-inset-top) + 76px));
+    bottom: var(--controls-height);
+    cursor: default;
+  }
+  .instructions {
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .instructions .desktop-hint {
+    display: none;
+  }
+  .mobile-hint {
+    display: block;
+  }
+  #thumb-pad {
+    display: block;
+    position: relative;
+    width: min(320px, 100%);
+    height: var(--pad-height);
+    margin: 8px auto 4px;
+    border: 1px solid #8b949e;
+    border-radius: 8px;
+    background: #e5e8ec;
+    touch-action: none;
+    user-select: none;
+    pointer-events: auto;
+  }
+  .thumb-origin,
+  .thumb-knob {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .thumb-origin {
+    width: 72px;
+    height: 72px;
+    border: 1px solid #8b949e;
+  }
+  .thumb-knob {
+    width: 32px;
+    height: 32px;
+    background: #20252c;
+  }
+  #thumb-pad.aiming .thumb-knob {
+    transform: translate(calc(-50% + var(--thumb-x, 0px)), calc(-50% + var(--thumb-y, 0px)));
+    background: #1865d8;
+  }
+  #app:has(#result:not([hidden])) #stage {
+    inset: 0;
+  }
+  #app:has(#error:not([hidden])) .instructions {
+    display: none;
+  }
+}
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
+  #app {
+    --pad-height: 128px;
+  }
+  #stage {
+    top: max(80px, calc(env(safe-area-inset-top) + 66px));
+    right: 288px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .instructions {
+    left: auto;
+    right: max(16px, env(safe-area-inset-right));
+    width: 256px;
+  }
+}

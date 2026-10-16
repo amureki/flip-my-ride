@@ -11,7 +11,8 @@ const source = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8
 function inputFixture() {
   const handlers = {};
   const keys = {};
-  const context = vm.createContext({ THREE, handlers, keys, HTMLInputElement: class {}, Element: class {} });
+  const padHandlers = {};
+  const context = vm.createContext({ THREE, handlers, padHandlers, keys, HTMLInputElement: class {}, Element: class {} });
   const fixture = `
   const position = new THREE.Vector3();
   const landing = position.clone();
@@ -21,7 +22,8 @@ function inputFixture() {
   const message = {textContent: ''};
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
-  const parkedCars = [], cones = [], levels = [{}], levelIndex = 0;
+  const parkedCars = [], carDamage = [], cones = [];
+  const trolleyDamage = {damaged: false}, levels = [{}], levelIndex = 0;
   const aimSymbols = Array.from({length: 3}, () => ({visible: false, material: {color: new THREE.Color()}}));
   let won = false, flight = null, flips = 0, touchdown = 1;
   const trolleyTime = 0;
@@ -32,15 +34,18 @@ function inputFixture() {
   let pointer = null, keyboardAiming = false;
   const aimKeys = new Set();
   const dragStart = new THREE.Vector2();
-  const stage = {addEventListener(name, fn) {handlers[name] = fn}, setPointerCapture() {}, releasePointerCapture() {}, focus() {}, getBoundingClientRect() {return {left: 0, top: 0, width: 800, height: 600}}};
+  const stage = {addEventListener(name, fn) {handlers[name] = fn}, setPointerCapture() {}, hasPointerCapture() {return true}, releasePointerCapture() {}, focus() {}, getBoundingClientRect() {return {left: 0, top: 0, width: 800, height: 600}}};
+  const thumbPad = {clientWidth: 320, clientHeight: 160, style: {setProperty() {}}, classList: {toggle() {}, remove() {}}, addEventListener(name, fn) {padHandlers[name] = fn}, setPointerCapture() {}, hasPointerCapture() {return true}, releasePointerCapture() {}};
+  let pointerSurface = stage;
+  const mobileControls = {matches: false, addEventListener() {}};
   const window = {addEventListener(name, fn) {keys[name] = fn}};
   function reset() {position.set(0, 0, 0); landing.copy(position); flight = null; cancelInput()}
-  function worldAt(x, y) {return new THREE.Vector3(x, 0, y)}
+  function worldAt(x, y) {return y > 600 ? new THREE.Vector3() : new THREE.Vector3(x, 0, y)}
   `;
   const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset()'));
-  const events = source.slice(source.indexOf('stage.addEventListener("pointerdown"'), source.indexOf('document.querySelector("#reset")'));
+  const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('document.querySelector("#reset")'));
   vm.runInContext(ts.transpile(fixture + functions + events), context);
-  return {handlers, keys, context};
+  return {handlers, padHandlers, keys, context};
 }
 
 test("short drags do not promise a flip that release cannot launch", () => {
@@ -108,13 +113,43 @@ test("WASD and arrows combine without doubling speed or releasing another held k
   assert.equal(vm.runInContext('aimKeys.size', context), 0);
 });
 
- test("landing marker distinguishes clear, collision-risk, and outside destinations", () => {
+ test("landing marker distinguishes clear, collision-risk, damaged, and outside destinations", () => {
   const {context} = inputFixture();
   vm.runInContext('showAim(new THREE.Vector3(2, 0, 0))', context);
   assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); updateAimFeedback()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); carDamage.push({damaged: false}); updateAimFeedback()', context);
   assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
   assert.match(vm.runInContext('message.textContent', context), /Collision risk/);
+  vm.runInContext('carDamage[0].damaged = true; updateAimFeedback()', context);
+  assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
   vm.runInContext('showAim(new THREE.Vector3(9,0,0))', context);
   assert.equal(vm.runInContext('aimSymbols[2].visible', context), true);
+});
+
+
+test("mobile pad below the camera projection reaches full power and ignores touches on the lot", () => {
+  const {handlers, padHandlers, context} = inputFixture();
+  vm.runInContext('mobileControls.matches = true', context);
+  const event = {pointerId: 1, pointerType: 'touch', clientX: 160, clientY: 700, target: {closest() {return null}}};
+  handlers.pointerdown(event);
+  assert.equal(vm.runInContext('pointer', context), null);
+  padHandlers.pointerdown(event);
+  padHandlers.pointermove({...event, clientX: 224});
+  assert.equal(vm.runInContext('landing.x', context), 9);
+  padHandlers.pointerup({...event, clientX: 224});
+  assert.equal(vm.runInContext('flight.to.x', context), 9);
+});
+
+test("pad cancellation, retry and resize cannot launch a pending gesture", () => {
+  for (const cancel of ['pointercancel', 'lostpointercapture', 'reset', 'resize']) {
+    const {padHandlers, keys, context} = inputFixture();
+    const event = {pointerId: 1, pointerType: 'touch', clientX: 160, clientY: 80, target: {closest() {return null}}};
+    padHandlers.pointerdown(event);
+    padHandlers.pointermove({...event, clientY: 48});
+    if (cancel === 'reset') vm.runInContext('reset()', context);
+    else if (cancel === 'resize') keys.resize();
+    else padHandlers[cancel]();
+    padHandlers.pointerup({...event, clientY: 48});
+    assert.equal(vm.runInContext('flight === null && !aim.visible && pointer === null', context), true, cancel);
+  }
 });
