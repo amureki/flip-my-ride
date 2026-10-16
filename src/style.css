@@ -792,3 +792,62 @@ button:disabled {
 #receipt-levels caption small { display: block; margin-top: 4px; font-weight: normal; }
 
 #save-status { margin: 4px 0; font-size: 11px; font-weight: normal; }
+
+@media (pointer: coarse) and (orientation: portrait), (pointer: coarse) and (min-height: 501px) {
+  #app {
+    display: grid;
+    grid-template-rows: max(64px, calc(env(safe-area-inset-top) + 48px)) auto auto minmax(0, 1fr) var(--controls-height);
+  }
+  .lot-info {
+    position: static;
+    grid-row: 2;
+    margin: 0 12px;
+  }
+  #message {
+    position: static;
+    grid-row: 3;
+    margin: 8px 12px 0;
+    min-height: 2.8em;
+  }
+  #stage {
+    position: relative;
+    grid-row: 4;
+    inset: auto;
+    min-height: 0;
+  }
+  #app:has(#result:not([hidden])) #stage,
+  #app:has(#error:not([hidden])) #stage {
+    position: absolute;
+    grid-area: 1 / 1 / -1 / -1;
+    inset: 0;
+  }
+}
+
+@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
+    grid-template-rows: 50px auto auto minmax(0, 1fr);
+    column-gap: 12px;
+    padding: max(8px, env(safe-area-inset-top)) var(--sidebar-right) max(8px, env(safe-area-inset-bottom)) 8px;
+  }
+  .lot-info {
+    position: static;
+    grid-column: 2;
+    grid-row: 2;
+  }
+  #message {
+    position: static;
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 8px;
+    min-height: 2.8em;
+  }
+  .game-controls {
+    position: static;
+    grid-column: 2;
+    grid-row: 4;
+    min-height: 0;
+    margin-top: 8px;
+  }
+}
