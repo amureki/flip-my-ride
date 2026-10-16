@@ -6,6 +6,7 @@ export type Level = {
   target: Point;
   cars: readonly Point[];
   cones: readonly Point[];
+  trolley?: boolean;
 };
 
 export const levels: readonly Level[] = [
@@ -25,8 +26,9 @@ export const levels: readonly Level[] = [
     cones: [],
   },
   {
-    name: "Just Park It",
-    hint: "Across the lot. Pick a clear landing before the final flip.",
+    name: "Unexpected Item",
+    trolley: true,
+    hint: "Wait for a clear landing. The trolley has right of way. Apparently.",
     start: [-5.5, 4.8],
     target: [4.2, -3.7],
     cars: [

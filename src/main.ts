@@ -4,6 +4,8 @@ import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { levels } from "./levels";
+import { makeTrolley, hitsTrolley } from "./trolley";
+import { runTotal, licenceVerdict, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
 const shareButtons = document.querySelectorAll<HTMLButtonElement>(
   "[data-native-share]",
@@ -19,6 +21,7 @@ const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
 const powerFill = document.querySelector<HTMLElement>("#power-fill")!;
 const result = document.querySelector<HTMLDivElement>("#result")!;
 let levelIndex = 0;
+const roundScores: RoundScore[] = [];
 const start = new THREE.Vector3();
 const target = new THREE.Vector3();
 const nextButton = document.querySelector<HTMLButtonElement>("#next-lot")!;
@@ -174,6 +177,9 @@ function makeCar(color: number) {
   box(1.12, 0.06, 0.03, 0xc74930, 0, 0.55, 1.34, root);
   return root;
 }
+const trolley = makeTrolley();
+scene.add(trolley.root);
+let trolleyTime = 0;
 const parkedCars: THREE.Group[] = [];
 // Reuse scene objects across lots and retries instead of allocating new meshes.
 const carColors = [0xc78051, 0x5b7970, 0xe1b75f, 0x6383a3, 0xa66c70];
@@ -314,6 +320,7 @@ let flight: {
   heading: number;
   rolls: number;
   clearedCar: boolean;
+  trolleyTime: number;
 } | null = null;
 let pointer: number | null = null;
 let dragStart = new THREE.Vector2();
@@ -385,6 +392,7 @@ function launch() {
     height: reducedMotion.matches ? 1 : 2.6 + distance * 0.38,
     rolls: distance > 5.5 ? 2 : 1,
     clearedCar: false,
+    trolleyTime,
     heading: Math.atan2(-(landing.x - position.x), -(landing.z - position.z)),
   };
   touchdown = 1;
@@ -411,6 +419,9 @@ function reset() {
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
   const level = levels[levelIndex];
+  trolleyTime = 0;
+  trolley.root.visible = !!level.trolley;
+  trolley.update(trolleyTime, reducedMotion.matches);
   start.set(level.start[0], 0, level.start[1]);
   target.set(level.target[0], 0, level.target[1]);
   parkingBay.position.copy(target);
@@ -465,6 +476,7 @@ function finishFlight() {
   const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
+  const trolleyHit = !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12));
   flight = null;
   pivot.rotation.set(0, 0, 0);
   if (
@@ -482,11 +494,11 @@ function finishFlight() {
         Math.abs(position.x - other.position.x) < 1.5 &&
         Math.abs(position.z - other.position.z) < 2.65,
     );
-    if (collided) {
+    if (collided || trolleyHit) {
       position.copy(oldPosition);
       hits++;
       message.textContent =
-        "Car hit. Your insurer has left the chat. Try another landing.";
+        trolleyHit ? "Unexpected item in the parking area. Claim filed." : "Car hit. Your insurer has left the chat. Try another landing.";
     }
     for (const cone of cones)
       if (
@@ -518,15 +530,18 @@ function finishFlight() {
     Math.abs(position.z - target.z) <= 0.68
   ) {
     won = true;
-    document.querySelector("#receipt-claims")!.textContent = String(hits);
-    document.querySelector("#receipt-insurance")!.textContent = hits
-      ? "Pending"
-      : "No claim";
+    roundScores[levelIndex] = { flips, hits };
+    const final = levelIndex === levels.length - 1;
+    const score = final ? runTotal(roundScores) : { flips, hits };
+    document.querySelector("#receipt-heading")!.textContent = final ? "Licence to Flip" : "Parking citation";
+    document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
+    document.querySelector("#receipt-flips")!.textContent = String(score.flips);
+    document.querySelector("#receipt-claims")!.textContent = String(score.hits);
+    document.querySelector("#receipt-insurance")!.textContent = score.hits ? "Please stop calling" : "Suspiciously intact";
+    document.querySelector("#receipt-stamp")!.textContent = final ? "UNFIT FOR NORMAL ROADS" : ["NEIGHBOURHOOD AIR TRAFFIC", "UNEXPECTED ITEM: YOUR CAR", "OVERBOOKED. OVERFLIPPED."][levelIndex];
     result.hidden = false;
-    document.querySelector("#result-title")!.textContent =
-      levelIndex === levels.length - 1 ? "All lots cleared." : hits ? "Close enough." : "Nailed it.";
-    document.querySelector("#result-detail")!.textContent =
-      `${flips} ${flips === 1 ? "flip" : "flips"}. ${hits} insurance ${hits === 1 ? "claim" : "claims"}. Zero normal driving.`;
+    document.querySelector("#result-title")!.textContent = final ? "You passed. Somehow." : hits ? "Bumper-to-bumper flight." : "Parkour. But parked.";
+    document.querySelector("#result-detail")!.textContent = final ? licenceVerdict(score.hits) : "Parking method: unnecessarily airborne.";
     message.textContent =
       levelIndex === levels.length - 1
         ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
@@ -638,6 +653,7 @@ document.querySelector("#again")!.addEventListener("click", () => {
 nextButton.addEventListener("click", () => {
   if (!won) return;
   levelIndex = (levelIndex + 1) % levels.length;
+  if (levelIndex === 0) roundScores.length = 0;
   reset();
   stage.focus({ preventScroll: true });
 });
@@ -645,7 +661,7 @@ function updateShareLinks() {
   shareVersion++;
   const content = shareContent(
     location.href,
-    won ? { flips, hits, lot: levels[levelIndex].name, completedLots: levelIndex === levels.length - 1 ? levels.length : undefined } : undefined,
+    won ? (levelIndex === levels.length - 1 ? { ...runTotal(roundScores), completedLots: levels.length } : { flips, hits, lot: levels[levelIndex].name }) : undefined,
   );
   const links = socialLinks(content);
   for (const link of document.querySelectorAll<HTMLAnchorElement>(
@@ -692,7 +708,7 @@ for (const button of shareButtons)
       await navigator.share(
         shareContent(
           location.href,
-          won ? { flips, hits, lot: levels[levelIndex].name, completedLots: levelIndex === levels.length - 1 ? levels.length : undefined } : undefined,
+          won ? (levelIndex === levels.length - 1 ? { ...runTotal(roundScores), completedLots: levels.length } : { flips, hits, lot: levels[levelIndex].name }) : undefined,
         ),
       );
     } catch (error) {
@@ -730,6 +746,10 @@ renderer.setAnimationLoop((now: number) => {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
   updateKeyboardAim(dt);
+  if (trolley.root.visible && !won) {
+    trolleyTime += dt;
+    trolley.update(trolleyTime, reducedMotion.matches);
+  }
   if (flight) {
     flight.time += dt;
     const anticipation = reducedMotion.matches ? 0 : 0.12;

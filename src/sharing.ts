@@ -7,7 +7,7 @@ export function shareContent(currentUrl: string, score?: Score) {
   return {
     title: "Flip My Ride",
     text: score
-      ? `${score.completedLots ? `I cleared all ${score.completedLots} lots. Final lot: ` : ""}It took me ${score.flips} ${score.flips === 1 ? "flip" : "flips"} and ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"} to park a car${score.lot ? ` in ${score.lot}` : ""}. Beat that.`
+      ? `${score.completedLots ? `I earned my Licence to Flip. ${score.completedLots}/${score.completedLots} lots cleared. Run total: ` : ""}It took me ${score.flips} ${score.flips === 1 ? "flip" : "flips"} and ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"} to park a car${score.lot ? ` in ${score.lot}` : ""}. Beat that.`
       : "Someone made a parking game where the Roadster only does flips. Good luck.",
     url: url.href,
   };

@@ -70,22 +70,17 @@
         <div id="result" hidden>
           <h2 id="result-title">Parked.</h2>
           <p id="result-detail"></p>
-          <section class="receipt" aria-label="Insurance receipt">
-            <h3>Insurance receipt</h3>
+          <section class="receipt" aria-labelledby="receipt-heading">
+            <h3 id="receipt-heading">Parking citation</h3>
+            <p id="receipt-progress"></p>
             <dl>
-              <div>
-                <dt>Parking fee</dt>
-                <dd>€0</dd>
-              </div>
-              <div>
-                <dt>Claims</dt>
-                <dd id="receipt-claims">0</dd>
-              </div>
-              <div>
-                <dt>Insurance</dt>
-                <dd id="receipt-insurance">No claim</dd>
-              </div>
+              <div><dt>Flips</dt><dd id="receipt-flips">0</dd></div>
+              <div><dt>Claims filed</dt><dd id="receipt-claims">0</dd></div>
+              <div><dt>Parking fee</dt><dd>€0</dd></div>
+              <div><dt>Normal driving</dt><dd>Not detected</dd></div>
+              <div><dt>Insurance</dt><dd id="receipt-insurance"></dd></div>
             </dl>
+            <p id="receipt-stamp"></p>
           </section>
           <p id="share-score-label" hidden>Share your score</p>
           <div

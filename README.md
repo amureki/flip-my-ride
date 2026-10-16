@@ -17,7 +17,7 @@ Cones count as insurance claims. Landing on a parked car or outside the lot retu
 
 ## Lots
 
-Play four lots in order: One Spot Over, Just Park It, Full Lot, and Last Space. Start with a short sideways flip, cross an open lot, then jump through two increasingly crowded layouts. Last Space has a three-jump route through the empty gaps. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
+Play four lots in order: One Spot Over, Unexpected Item, Full Lot, and Last Space. Start with a short sideways flip, time a landing around a runaway shopping trolley, then jump through two increasingly crowded layouts. Last Space has a three-jump route through the empty gaps. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
 
 ## Static deployment
 
@@ -61,3 +61,5 @@ X, WhatsApp, Telegram, and the native share action are visible at the top from t
 The native action uses the device share sheet when available; otherwise it copies the game link, with manual selection if clipboard access fails. Cancelling native sharing does not copy anything. There are no score-bearing challenge URLs or download steps. Deploy to public HTTPS before sharing; localhost URLs only work on the same device.
 
 Run local share URL and text checks with npm test.
+
+In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Only landing on it files a claim and returns the car to its previous position. Retry restarts the cycle.

@@ -383,3 +383,15 @@ button:disabled {
 .final-lot .result-social button:hover {
   background: #39424d;
 }
+
+#result #receipt-progress { margin: 0 0 12px; }
+#result #receipt-stamp {
+  margin: 14px 0 0;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+}
+.final-lot .receipt h3 { font-size: 24px; text-align: center; }
+.final-lot #receipt-progress { text-align: center; font-weight: bold; }
+.final-lot #receipt-stamp { border: 2px solid currentColor; padding: 8px 4px; }
+#result { max-height: calc(100dvh - 110px); overflow-y: auto; }

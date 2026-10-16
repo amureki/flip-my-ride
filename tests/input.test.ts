@@ -22,6 +22,7 @@ function inputFixture() {
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
   let won = false, flight = null, flips = 0, touchdown = 1;
+  const trolleyTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};
   const shockwave = {material: {}}, pivot = {scale: new THREE.Vector3()}, stunt = {};
   function burst() {}

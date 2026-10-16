@@ -45,3 +45,7 @@ A small label below the header shows the current lot and progress through four i
 ## Lighting
 
 Warm directional sunlight and cool sky fill use filmic tone mapping and filtered soft shadows. The Roadster uses a precomputed reflection map and a restrained clear coat. A soft ground contact shadow beneath its body and tires fades with jump height. The reflection map is generated once; contact shadows use five shared-texture planes without a full-screen rendering pass.
+
+Round receipts use parking-citation jokes. The final Licence to Flip shows completed-lot count and totals across completed rounds, with a claim-based verdict and an UNFIT FOR NORMAL ROADS stamp. Retrying replaces the current round score; starting a new run clears totals. Sharing remains primary.
+
+Unexpected Item introduces timing in the second lot. A wire shopping trolley with a red handle and one wobbling wheel crosses the target bay. Reduced motion removes the decorative wobble, retaining the gameplay movement. Collision is checked only on landing.
