@@ -42,7 +42,7 @@ The public URL is https://flip.amureki.me/. `.env.production` sets `SITE_URL` fo
 
 The build puts canonical and absolute Open Graph/X image URLs in the HTML and generates `sitemap.xml`. Without `SITE_URL`, local builds still work, but print a warning and omit these URL-dependent fields. Metadata does not depend on JavaScript execution.
 
-`public/og-image.png` is the 1200 × 630 social card; its editable source is `public/og-image.svg`. The favicon, Apple touch icon, and 192/512-pixel home-screen icons share the parking-car mark in `public/favicon.svg`. Keep PNG exports in sync when editing the SVG sources. The web manifest supports home-screen launch; it does not provide offline play.
+`public/og-image.png` is the 1200 × 630 social card, generated with the built-in image generation tool using `assets/og-image-prompt.txt`. The favicon, Apple touch icon, and 192/512-pixel home-screen icons share the flipping-car mark in `public/favicon.svg`. Keep icon PNG exports in sync when editing that SVG. Social image and favicon URLs include a version tag; increase it when replacing these assets. The web manifest supports home-screen launch; it does not provide offline play.
 
 After deployment, check a shared link in your target messaging/social apps and confirm that `og-image.png` is publicly reachable. Social platforms cache previews, so refresh their caches after changes. All shares use the same public game preview; completed scores are included in the post text.
 
