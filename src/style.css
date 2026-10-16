@@ -205,11 +205,12 @@ h2 {
   padding: 8px 0;
   border-block: 1px dashed #b4bac1;
   text-align: left;
-  font-size: 12px;
+  font-size: 14px;
 }
 .receipt h3 {
-  margin: 0 0 8px;
-  font-size: inherit;
+  margin: 0 0 4px;
+  font-size: 14px;
+  text-align: center;
 }
 .receipt dl {
   margin: 0;
@@ -421,48 +422,26 @@ button:disabled {
   background: #39424d;
 }
 
-#result #receipt-progress { margin: 0 0 6px; }
-#result #receipt-stamp {
-  margin: 6px 0 0;
-  font-size: 11px;
-  font-weight: bold;
+#result #receipt-progress { margin: 0 0 12px; text-align: center; }
+.receipt .receipt-bill {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #b4bac1;
+}
+.receipt-bill dd { text-align: right; }
+#result .receipt-footer {
+  margin: 10px 0 0;
+  font-size: 12px;
   text-align: center;
 }
-.final-lot .receipt h3 { font-size: 16px; text-align: center; }
-.final-lot #receipt-progress { text-align: center; font-weight: bold; }
-.final-lot #receipt-stamp { border: 2px solid currentColor; padding: 4px; }
+.receipt-totals { font-size: 16px; }
+.receipt-totals dd { font-weight: bold; }
+#result #result-detail {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
 
-
-#result .receipt-damage {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 8px 0;
-}
-#result .receipt-damage div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
-}
-.receipt-damage dd {
-  font-size: 16px;
-  font-weight: bold;
-}
-.receipt-details summary {
-  cursor: pointer;
-  padding-block: 8px;
-  min-height: 44px;
-  display: list-item;
-  align-content: center;
-}
-.receipt-details summary:focus-visible {
-  outline: 2px solid #1865d8;
-  outline-offset: -2px;
-}
-#result .receipt-details p {
-  margin: 4px 0;
-}
 #app:has(#result:not([hidden])) > .instructions {
   visibility: hidden;
 }

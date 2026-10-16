@@ -480,7 +480,6 @@ function reset() {
   won = false;
   flipsLabel.textContent = "0";
   result.hidden = true;
-  document.querySelector<HTMLDetailsElement>(".receipt-details")!.open = false;
   clearAim();
   shareVersion++;
   sharing = false;
@@ -579,28 +578,19 @@ function finishFlight() {
     };
     const final = levelIndex === levels.length - 1;
     const score = final ? runTotal(roundScores) : roundScores[levelIndex];
-    document.querySelector("#receipt-heading")!.textContent = final ? "Licence to Flip" : "Parking citation";
     document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
     document.querySelector("#receipt-claims")!.textContent = String(score.hits);
-    for (const [kind, pun] of [
-      ["cars", "Complimentary compact upgrade."],
-      ["trolleys", "Basket case."],
-      ["cones", "Traffic de-coned."],
-    ] as const) {
-      document.querySelector(`#receipt-${kind}`)!.textContent = String(score[kind]);
-      const joke = document.querySelector<HTMLElement>(`#receipt-${kind}-pun`)!;
-      joke.textContent = score[kind] ? pun : "";
-      joke.hidden = !score[kind];
-    }
-    const damageCount = score.cars + score.trolleys + score.cones;
-    document.querySelector("#receipt-boundaries")!.textContent = String(score.hits - damageCount);
-    document.querySelector("#receipt-repairs")!.textContent = damageCount ? "We’ll be in touch." : "€0 — Somehow.";
-    document.querySelector("#receipt-insurance")!.textContent = score.hits ? "Please stop calling" : "Suspiciously intact";
-    document.querySelector("#receipt-stamp")!.textContent = final ? "UNFIT FOR NORMAL ROADS" : ["NEIGHBOURHOOD AIR TRAFFIC", "OVERBOOKED. OVERFLIPPED.", "UNEXPECTED ITEM: YOUR CAR"][levelIndex];
+    document.querySelector("#receipt-heading")!.textContent = final ? "Final receipt" : "Parking receipt";
+    document.querySelector("#receipt-repairs")!.textContent = score.cars + score.trolleys + score.cones ? "We’ll be in touch." : "€0. Somehow.";
     result.hidden = false;
-    document.querySelector("#result-title")!.textContent = final ? "You passed. Somehow." : hits ? "Bumper-to-bumper flight." : "Parkour. But parked.";
-    document.querySelector("#result-detail")!.textContent = final ? licenceVerdict(score.hits) : "Parking method: unnecessarily airborne.";
+    document.querySelector("#result-title")!.textContent = final ? "Licence to Flip" : hits ? "Crash landing. Still parking." : "Parkour. But parked.";
+    document.querySelector("#result-detail")!.textContent = final ? licenceVerdict(score.hits)
+      : score.cars ? "Cars flattened. Now that’s compact parking."
+      : score.trolleys ? "Off your trolley. Into your spot."
+      : score.cones ? "Cone-gratulations. You made an impression."
+      : score.hits ? "A few claims to fame."
+      : "No claims. All bragging rights.";
     message.textContent =
       levelIndex === levels.length - 1
         ? `All ${levels.length} lots parked. You earned that licence. Somehow.`

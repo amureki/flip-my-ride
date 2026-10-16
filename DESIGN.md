@@ -36,7 +36,7 @@ Sharing uses locally embedded Simple Icons SVG marks for X, WhatsApp, and Telegr
 
 ## Parking jokes
 
-A small NO KICKFLIPS sign stands behind the target bay. Launch captions respond to jump power; landing captions respond to clearing a parked car or filing a claim, with collisions taking priority. The completion overlay includes a compact insurance receipt with the actual claim count, a €0 parking fee, and pending insurance only when claims exist.
+A small NO KICKFLIPS sign stands behind the target bay. Launch captions respond to jump power; landing captions respond to clearing a parked car or filing a claim, with collisions taking priority. The completion overlay shows flips, claims filed, and one short pun.
 
 ## Lots
 
@@ -46,7 +46,7 @@ A small label below the header shows the current lot and progress through four i
 
 Warm directional sunlight and cool sky fill use filmic tone mapping and filtered soft shadows. The Roadster uses a precomputed reflection map and a restrained clear coat. A soft ground contact shadow beneath its body and tires fades with jump height. The reflection map is generated once; contact shadows use five shared-texture planes without a full-screen rendering pass.
 
-Round receipts use parking-citation jokes. The final Licence to Flip shows completed-lot count and totals across completed rounds, with a claim-based verdict and an UNFIT FOR NORMAL ROADS stamp. Retrying replaces the current round score; starting a new run clears totals. Sharing remains primary.
+Round receipts use a playful parking headline and one outcome-specific pun. The final Licence to Flip shows completed-lot count and flip/claim totals across completed rounds, with one claim-based verdict. Retrying replaces the current round score; starting a new run clears totals. Sharing remains primary.
 
 Unexpected Item introduces timing in the third lot. A wire shopping trolley with a red handle and one wobbling wheel crosses the target bay. Reduced motion removes the decorative wobble, retaining the gameplay movement. Collision is checked only on landing. Last Space combines crowded route planning with a trolley moving along the final approach; its intermediate landing gaps remain safe.
 
@@ -62,6 +62,6 @@ The lot base uses softly rounded edges and fine curb joints. Trees use tapered t
 
 Landing on parked cars or the trolley keeps the player at the landing point. Each newly crushed object adds one claim; overlapping objects each count once. Cars compress into broad wrecks with splayed wheels. The trolley flattens and stops at its exact impact position. Cones flatten in place. Damage remains through later jumps and the score screen, and resets on Retry or the next lot. Reduced motion applies the final damage immediately. Out-of-bounds landings still return to the previous position. Clean parking means finishing without claims; destruction never blocks completion.
 
-Receipts itemize cars flattened, trolleys crushed, cones flattened, and out-of-bounds claims. Damage-specific puns appear only for nonzero counts. The repair bill is “We’ll be in touch.” after damage and “€0 — Somehow.” otherwise. The final licence totals these categories across completed lots; Retry replaces the current lot’s score.
+Receipts retain a centered receipt heading and lot name, aligned flip and claim rows, a dashed divider, and parking-fee and repair-bill rows. One punchline reflects damage, with cars taking priority over trolleys and cones. A short thank-you footer completes the receipt. Itemized damage, stamps, and fine print are omitted to keep the score quick to read. Retry replaces the current lot’s score.
 
-The result uses a compact score section and a separate action section. Damage counts sit in three columns; supplementary insurance details and damage puns are under native “Fine print” disclosure. The repair-bill joke remains visible. Actions retain 44px targets and never scroll with the receipt. Short landscape screens place actions beside the score; on other screens they sit below it. The score section alone scrolls when expanded or under text enlargement. The result fits the dynamic viewport and hides gameplay hints while open.
+The result uses a compact score section and a separate action section. Aligned rows show flips, claims, the parking fee, and a repair-bill joke, followed by one outcome punchline and a short receipt footer. Actions retain 44px targets and never scroll with the receipt. Short landscape screens place actions beside the score; on other screens they sit below it. The score section alone scrolls under text enlargement. The result fits the dynamic viewport and hides gameplay hints while open.
