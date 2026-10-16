@@ -1,3 +1,4 @@
+import { readProgress, writeProgress } from "./progress";
 import { trafficPosition, orientedVehicleHeight, makeTrafficSignals, type TrafficRoute, type DriverState, advanceTraffic, type TrafficBody } from "./traffic";
 import { makeParkingFeedback, fitsParkingBay } from "./parking-feedback";
 import { makeEasterEggs, type EggState } from "./easter-eggs";
@@ -91,6 +92,13 @@ function levelEvent(name: string, extra: Record<string, string | number | boolea
   });
 }
 const roundScores: RoundScore[] = [];
+const bestScores: (RoundScore | null)[] = levels.map(() => null);
+function saveProgress(receipt: boolean) {
+  let saved = false;
+  try { saved = writeProgress(localStorage, {version: 1, levelIndex, receipt, rounds: roundScores, best: bestScores}); } catch {}
+  const status = document.querySelector<HTMLElement>("#save-status")!;
+  status.hidden = saved;
+}
 const start = new THREE.Vector3();
 const target = new THREE.Vector3();
 const nextButton = document.querySelector<HTMLButtonElement>("#next-lot")!;
@@ -682,7 +690,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   updateTraffic(0);
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
-  document.querySelector("#par-goal")!.textContent = `Clean par: ≤${level.par} ${level.par === 1 ? "flip" : "flips"} · 0 claims`;
+  document.querySelector("#par-goal")!.textContent = `Clean par: ≤${level.par} ${level.par === 1 ? "flip" : "flips"} · 0 claims${bestScores[levelIndex] && meetsCleanPar(bestScores[levelIndex]!, level.par) ? " · Earned" : ""}`;
   const completedLastLot = gameCompleted || levelIndex === levels.length - 1;
   nextButton.textContent = completedLastLot ? "Play again" : "Next lot";
   nextButton.classList.toggle("secondary", completedLastLot);
@@ -724,6 +732,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   }
   particles.length = 0;
   exhaust.clear();
+  if (reason !== "replay" && reason !== "initial") saveProgress(false);
 }
 function finishFlight() {
   if (!flight) return;
@@ -798,13 +807,21 @@ function finishFlight() {
       trolleys: trolleyDamage.damaged ? 1 : 0,
       cones: cones.filter((cone) => cone.mesh.visible && cone.hit).length,
     };
-    roundScores[levelIndex] = gameCompleted ? bestRound(roundScores[levelIndex], attemptScore) : attemptScore;
+    bestScores[levelIndex] = bestScores[levelIndex] ? bestRound(bestScores[levelIndex]!, attemptScore) : attemptScore;
+    roundScores[levelIndex] = bestScores[levelIndex]!;
     const final = gameCompleted || levelIndex === levels.length - 1;
     levelEvent("level_completed", attemptScore);
     if (final && !gameCompleted) {
       trackEvent("game_completed", { ...runTotal(roundScores), levels: levels.length });
       gameCompleted = true;
     }
+    saveProgress(true);
+    showReceipt();
+  }
+}
+
+function showReceipt() {
+  const final = gameCompleted;
     const score = final ? runTotal(roundScores) : roundScores[levelIndex];
     document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
@@ -862,8 +879,9 @@ function finishFlight() {
       ? result.querySelector<HTMLAnchorElement>("[data-social]")!
       : nextButton;
     primaryAction.focus({ preventScroll: true });
-  }
+  watchReplay.hidden = !moves.length;
 }
+
 for (const surface of [stage, thumbPad]) {
   surface.addEventListener("pointerdown", (event) => {
     if (
@@ -1184,7 +1202,25 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 mobileControls.addEventListener("change", resize);
 resize();
+let restored = null;
+try { restored = readProgress(localStorage, levels.length); } catch {}
+if (restored) {
+  levelIndex = restored.levelIndex;
+  roundScores.push(...restored.rounds);
+  bestScores.splice(0, bestScores.length, ...restored.best);
+  gameCompleted = roundScores.length === levels.length;
+  gameStarted = roundScores.length > 0;
+}
 reset("initial");
+if (restored?.receipt) {
+  won = true;
+  flips = roundScores[levelIndex].flips;
+  hits = roundScores[levelIndex].hits;
+  flipsLabel.textContent = String(flips);
+  position.copy(target);
+  pivot.position.copy(position).y += 0.5;
+  showReceipt();
+}
 let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
   const dt = document.hidden ? 0 : Math.max(0, Math.min((now - last) / 1000, 0.04));
