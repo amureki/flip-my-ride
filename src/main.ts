@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
 import { makeAsphalt } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { makeContactShadow } from "./contact-shadow";
@@ -88,13 +89,11 @@ function box(
   parent.add(mesh);
   return mesh;
 }
-box(22, 0.5, 20, 0xa8b1a5, 0, -0.6, 0);
-box(18.8, 0.3, 16, 0xc8cbce, 0, -0.28, 0);
-box(18, 0.1, 15, 0x737b83, 0, -0.08, 0);
+scene.add(makeLotBase());
 scene.add(makeAsphalt(renderer.capabilities.getMaxAnisotropy()));
 const parkingBay = new THREE.Group();
 scene.add(parkingBay);
-box(2.7, 0.018, 4.1, 0x96bb69, 0, 0.012, 0, parkingBay);
+box(2.7, 0.018, 4.1, 0x809b69, 0, 0.012, 0, parkingBay);
 for (const x of [-1.35, 1.35])
   box(0.08, 0.025, 4.1, 0xeaffc6, x, 0.025, 0, parkingBay);
 for (const z of [-2.05, 2.05])
@@ -181,36 +180,6 @@ for (const y of [1.92, 3.78]) {
   sign.add(bolt);
 }
 scene.add(sign);
-function makeCar(color: number) {
-  const root = new THREE.Group();
-  box(1.45, 0.38, 2.65, color, 0, 0.44, 0, root);
-  const hood = box(1.36, 0.22, 0.92, color, 0, 0.69, -0.73, root);
-  hood.rotation.x = -0.09;
-  box(1.14, 0.38, 1.15, 0x283e3e, 0, 0.82, 0.12, root);
-  box(1.18, 0.1, 0.86, color, 0, 1.04, 0.24, root);
-  box(1.4, 0.14, 0.53, color, 0, 0.7, 1.02, root);
-  for (const x of [-0.75, 0.75])
-    for (const z of [-0.83, 0.85]) {
-      const wheel = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.31, 0.31, 0.19, 16),
-        mat(0x252b28),
-      );
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(x, 0.32, z);
-      wheel.castShadow = true;
-      root.add(wheel);
-      const hub = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.16, 0.16, 0.2, 12),
-        mat(0x9ba69d),
-      );
-      hub.rotation.z = Math.PI / 2;
-      hub.position.copy(wheel.position);
-      root.add(hub);
-    }
-  box(1.13, 0.07, 0.03, 0xf9f7d8, 0, 0.55, -1.34, root);
-  box(1.12, 0.06, 0.03, 0xc74930, 0, 0.55, 1.34, root);
-  return root;
-}
 const trolley = makeTrolley();
 scene.add(trolley.root);
 let trolleyTime = 0;
@@ -222,7 +191,7 @@ for (
   i < Math.max(...levels.map((level) => level.cars.length));
   i++
 ) {
-  const parked = makeCar(carColors[i % carColors.length]);
+  const parked = makeParkedCar(carColors[i % carColors.length]);
   scene.add(parked);
   parkedCars.push(parked);
 }
@@ -286,20 +255,11 @@ for (const [x, z] of [
   scene.add(cone);
   cones.push({ mesh: cone, hit: false });
 }
-for (const [x, z] of [
-  [-9.7, -7.5],
-  [9.7, 6.3],
-  [-9.5, 7.5],
-  [8.9, -8.6],
-]) {
-  box(0.23, 1.25, 0.23, 0x7a6950, x, 0.35, z);
-  const tree = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.2, 1),
-    mat(0x607748),
-  );
-  tree.scale.set(0.85, 1.25, 0.85);
-  tree.position.set(x, 1.5, z);
-  tree.castShadow = true;
+for (const [index, [x, z]] of [
+  [-9.7, -7.5], [9.7, 6.3], [-9.5, 7.5], [8.9, -8.6],
+].entries()) {
+  const tree = makeTree(index);
+  tree.position.set(x, 0, z);
   scene.add(tree);
 }
 // A world-space landing ring makes touch and mouse aiming use the same geometry.
@@ -307,12 +267,25 @@ const aim = new THREE.Group();
 scene.add(aim);
 aim.visible = false;
 const ring = new THREE.Mesh(
-  new THREE.RingGeometry(0.68, 0.76, 48),
-  new THREE.MeshBasicMaterial({ color: 0xfff5ce, side: THREE.DoubleSide }),
+  new THREE.RingGeometry(0.7, 0.745, 48),
+  new THREE.MeshBasicMaterial({ color: 0xfff5ce, side: THREE.DoubleSide, depthTest: false, depthWrite: false }),
 );
+ring.renderOrder = 10;
 ring.rotation.x = -Math.PI / 2;
 ring.position.y = 0.07;
 aim.add(ring);
+const aimSymbols = [
+  [[-0.24, 0], [-0.06, -0.18], [-0.06, -0.18], [0.26, 0.23]],
+  [[0, 0.27], [0, -0.08], [0, -0.2], [0, -0.27]],
+  [[-0.22, -0.22], [0.22, 0.22], [-0.22, 0.22], [0.22, -0.22]],
+].map((points) => {
+  const symbol = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(
+    points.map(([x, z]) => new THREE.Vector3(x, 0.075, -z)),
+  ), new THREE.LineBasicMaterial({ color: 0xfff5ce, depthTest: false, depthWrite: false }));
+  symbol.renderOrder = 11;
+  aim.add(symbol);
+  return symbol;
+});
 const aimLine = new THREE.Line(
   new THREE.BufferGeometry(),
   new THREE.LineBasicMaterial({ color: 0xfff5ce }),
@@ -398,15 +371,29 @@ function showAim(delta: THREE.Vector3) {
   ]);
   aimLine.visible = true;
   powerFill.style.width = `${(delta.length() / 9) * 100}%`;
+  updateAimFeedback();
+}
+function updateAimFeedback() {
   const outside =
     Math.abs(landing.x) > bounds.x - 0.8 ||
     Math.abs(landing.z) > bounds.z - 1.3;
-  (ring.material as THREE.MeshBasicMaterial).color.set(
-    outside ? 0xdc6839 : 0xfff5ce,
-  );
+  const obstacle = parkedCars.some((other) => other.visible &&
+    Math.abs(landing.x - other.position.x) < 1.5 && Math.abs(landing.z - other.position.z) < 2.65) ||
+    cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6) ||
+    (!!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
+      trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + position.distanceTo(landing) * 0.075), levels[levelIndex].trolley!));
+  const state = outside ? 2 : obstacle ? 1 : 0;
+  const color = [0xfff5ce, 0xe9b657, 0xdc6839][state];
+  (ring.material as THREE.MeshBasicMaterial).color.set(color);
+  aimSymbols.forEach((symbol, index) => {
+    symbol.visible = index === state;
+    symbol.material.color.set(color);
+  });
   message.textContent = outside
     ? "That is technically outside the parking lot."
-    : keyboardAiming
+    : obstacle
+      ? "Collision risk. Landing here may add a claim."
+      : keyboardAiming
       ? "Press Space to flip."
       : "Release to commit to this engineering decision.";
 }
@@ -789,6 +776,7 @@ renderer.setAnimationLoop((now: number) => {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
   updateKeyboardAim(dt);
+  if (aim.visible && !flight && !won) updateAimFeedback();
   if (trolley.root.visible && !won) {
     trolleyTime += dt;
     if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);

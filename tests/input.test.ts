@@ -21,6 +21,8 @@ function inputFixture() {
   const message = {textContent: ''};
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
+  const parkedCars = [], cones = [], levels = [{}], levelIndex = 0;
+  const aimSymbols = Array.from({length: 3}, () => ({visible: false, material: {color: new THREE.Color()}}));
   let won = false, flight = null, flips = 0, touchdown = 1;
   const trolleyTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};
@@ -104,4 +106,15 @@ test("WASD and arrows combine without doubling speed or releasing another held k
   keys.keyup(key('d'));
   keys.keyup(key('W'));
   assert.equal(vm.runInContext('aimKeys.size', context), 0);
+});
+
+ test("landing marker distinguishes clear, collision-risk, and outside destinations", () => {
+  const {context} = inputFixture();
+  vm.runInContext('showAim(new THREE.Vector3(2, 0, 0))', context);
+  assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); updateAimFeedback()', context);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
+  assert.match(vm.runInContext('message.textContent', context), /Collision risk/);
+  vm.runInContext('showAim(new THREE.Vector3(9,0,0))', context);
+  assert.equal(vm.runInContext('aimSymbols[2].visible', context), true);
 });
