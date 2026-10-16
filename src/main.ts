@@ -42,6 +42,31 @@ let replay: ReplaySession | null = null;
 const stage = document.querySelector<HTMLDivElement>("#stage")!;
 const thumbPad = document.querySelector<HTMLDivElement>("#thumb-pad")!;
 const mobileControls = matchMedia("(pointer: coarse)");
+const portrait = matchMedia("(orientation: portrait)");
+const rotationHint = document.querySelector<HTMLElement>("#rotation-hint")!;
+let rotationHintDismissed = false;
+try {
+  rotationHintDismissed = localStorage.getItem("rotation-hint-dismissed") === "1";
+} catch {
+  // Storage can be unavailable; dismissal still lasts for this page visit.
+}
+function dismissRotationHint() {
+  rotationHintDismissed = true;
+  rotationHint.hidden = true;
+  try {
+    localStorage.setItem("rotation-hint-dismissed", "1");
+  } catch {
+    // Keep playing when storage is unavailable.
+  }
+}
+function updateRotationHint() {
+  if (!portrait.matches && !rotationHint.hidden) dismissRotationHint();
+  rotationHint.hidden = rotationHintDismissed || !mobileControls.matches || !portrait.matches;
+}
+document.querySelector("#dismiss-rotation-hint")!.addEventListener("click", dismissRotationHint);
+portrait.addEventListener("change", updateRotationHint);
+mobileControls.addEventListener("change", updateRotationHint);
+updateRotationHint();
 let pointerSurface: HTMLElement = stage;
 const message = document.querySelector<HTMLDivElement>("#message")!;
 const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
@@ -447,6 +472,7 @@ function launch(replayMove?: ReplayMove) {
   const distance = position.distanceTo(landing);
   clearAim();
   if (distance < 0.3 || won || flight) return;
+  if (!replay) dismissRotationHint();
   if (!replay && !attemptStarted) {
     attemptStarted = true;
     attempt++;

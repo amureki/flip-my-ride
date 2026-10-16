@@ -29,6 +29,7 @@ function inputFixture() {
   let roundTime = 0;
   let attemptStarted = false, attempt = 0, attemptSeconds = 0, gameStarted = false;
   function trackEvent() {}
+  function dismissRotationHint() {}
   function levelEvent() {}
   const trolleyTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};

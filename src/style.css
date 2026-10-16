@@ -508,6 +508,27 @@ button:disabled {
 .mobile-hint {
   display: none;
 }
+#rotation-hint {
+  position: absolute;
+  top: max(88px, calc(env(safe-area-inset-top) + 72px));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  background: #edf0f3;
+}
+#rotation-hint p {
+  margin: 0;
+  font-size: 14px;
+}
+#rotation-hint button {
+  min-height: 44px;
+  margin-left: auto;
+}
 @media (pointer: coarse) {
   header nav {
     display: none;
@@ -625,34 +646,57 @@ button:disabled {
 @media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
   #app {
     --pad-height: 128px;
+    --sidebar-width: 184px;
+    --sidebar-right: max(12px, env(safe-area-inset-right));
   }
   #stage {
-    top: max(80px, calc(env(safe-area-inset-top) + 66px));
-    right: 200px;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: calc(var(--sidebar-width) + var(--sidebar-right) + 12px);
     bottom: max(8px, env(safe-area-inset-bottom));
   }
-  .instructions {
+  header {
+    top: max(8px, env(safe-area-inset-top));
     left: auto;
-    right: max(16px, env(safe-area-inset-right));
-    width: 168px;
+    right: var(--sidebar-right);
+    width: var(--sidebar-width);
+    justify-content: space-between;
+  }
+  header h1 {
+    display: none;
+  }
+  header .score {
+    margin-left: 0;
+  }
+  #lot-label {
+    top: max(58px, calc(env(safe-area-inset-top) + 50px));
+    left: auto;
+    right: var(--sidebar-right);
+    width: var(--sidebar-width);
+  }
+  .instructions {
+    top: max(84px, calc(env(safe-area-inset-top) + 76px));
+    left: auto;
+    right: var(--sidebar-right);
+    width: var(--sidebar-width);
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: minmax(2.8em, 1fr) var(--pad-height);
     row-gap: 6px;
+    overflow-y: auto;
+    pointer-events: auto;
+    overscroll-behavior: contain;
   }
   .instructions #message {
     grid-column: 1;
     grid-row: 1;
   }
-  .instructions .mobile-hint {
-    grid-column: 1;
-    grid-row: 2;
+  .instructions .mobile-hint,
+  .instructions .game-credit {
+    display: none;
   }
   .instructions #thumb-pad {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 2;
     margin-inline: auto;
-  }
-  .instructions .game-credit {
-    grid-row: 4;
   }
 }
