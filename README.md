@@ -106,3 +106,5 @@ After each completed lot, Watch replay plays every jump since the latest Retry, 
 Back to score, Escape, or hiding the tab stops playback and restores the completed score. Players can use their own screen recorder while watching. There is no built-in video export.
 
 In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle. Replay preserves trolley timing at each launch.
+
+Parked vehicles are original, unbadged compact, fastback, SUV, and semi tractor designs. The tractor appears in Unexpected Item. Mesh dimensions also define collision footprints and body/roof landing surfaces; these are stylized game units, not manufacturer specifications. No promotional photographs or manufacturer model assets are included. This is not legal clearance.

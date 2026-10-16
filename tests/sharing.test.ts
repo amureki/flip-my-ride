@@ -7,7 +7,7 @@ test("share URL preserves static-host path without challenge or tracking state",
     "https://example.com/tesla-flips/?tracking=1#flips=3&hits=1",
   );
   assert.equal(content.url, "https://example.com/tesla-flips/");
-  assert.equal(content.text, "Tesla made it flip. I still can't park it.");
+  assert.equal(content.text, "It can flip. I still can't park it.");
 });
 test("a completed run shares a boast with correct singular and plural", () => {
   assert.match(

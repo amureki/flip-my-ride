@@ -4,7 +4,7 @@ export function shareContent(currentUrl: string, score?: Score) {
   const url = new URL(currentUrl);
   url.search = "";
   url.hash = "";
-  let text = "Tesla made it flip. I still can't park it.";
+  let text = "It can flip. I still can't park it.";
   if (score) {
     const total = `${score.flips} ${score.flips === 1 ? "flip" : "flips"}. ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"}.`;
     text = score.completedLots
