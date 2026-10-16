@@ -716,7 +716,7 @@ function updatePointerAim(event: PointerEvent) {
     const centerY = rect.top + rect.height / 2;
     delta.copy(worldAt(centerX + dx / (distance || 1), centerY + dy / (distance || 1)))
       .sub(worldAt(centerX, centerY))
-      .normalize().multiplyScalar(Math.min(distance / radius, 1) * 9);
+      .normalize().multiplyScalar(Math.min(distance / (radius * 1.5), 1) ** 1.5 * 9);
     const scale = distance > radius ? radius / distance : 1;
     thumbPad.style.setProperty("--thumb-x", `${dx * scale}px`);
     thumbPad.style.setProperty("--thumb-y", `${dy * scale}px`);
@@ -932,8 +932,10 @@ document.addEventListener("visibilitychange", () => {
 function resize() {
   const { width, height } = stage.getBoundingClientRect();
   const aspect = width / height;
-  // Keep the entire playable lot in view in portrait and landscape.
-  const halfHeight = Math.max(12, 15 / aspect);
+  // Mobile framing trims decorative scenery while keeping the playable lot visible.
+  const halfHeight = mobileControls.matches
+    ? Math.max(9.5, 11.8 / aspect)
+    : Math.max(12, 15 / aspect);
   camera.left = -halfHeight * aspect;
   camera.right = halfHeight * aspect;
   camera.top = halfHeight;

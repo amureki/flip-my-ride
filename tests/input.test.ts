@@ -40,7 +40,7 @@ function inputFixture() {
   const aimKeys = new Set();
   const dragStart = new THREE.Vector2();
   const stage = {addEventListener(name, fn) {handlers[name] = fn}, setPointerCapture() {}, hasPointerCapture() {return true}, releasePointerCapture() {}, focus() {}, getBoundingClientRect() {return {left: 0, top: 0, width: 800, height: 600}}};
-  const thumbPad = {clientWidth: 320, clientHeight: 160, style: {setProperty() {}}, classList: {toggle() {}, remove() {}}, addEventListener(name, fn) {padHandlers[name] = fn}, setPointerCapture() {}, hasPointerCapture() {return true}, releasePointerCapture() {}};
+  const thumbPad = {clientWidth: 128, clientHeight: 128, style: {setProperty() {}}, classList: {toggle() {}, remove() {}}, addEventListener(name, fn) {padHandlers[name] = fn}, setPointerCapture() {}, hasPointerCapture() {return true}, releasePointerCapture() {}};
   let pointerSurface = stage;
   const mobileControls = {matches: false, addEventListener() {}};
   const window = {addEventListener(name, fn) {keys[name] = fn}};
@@ -159,9 +159,13 @@ test("mobile pad below the camera projection reaches full power and ignores touc
   handlers.pointerdown(event);
   assert.equal(vm.runInContext('pointer', context), null);
   padHandlers.pointerdown(event);
-  padHandlers.pointermove({...event, clientX: 224});
+  padHandlers.pointermove({...event, clientX: 184});
+  assert.ok(vm.runInContext('landing.x > 1 && landing.x < 2', context), 'Small drags must allow fine aiming');
+  padHandlers.pointermove({...event, clientX: 196});
+  assert.ok(Math.abs(vm.runInContext('landing.x', context) - 9 * 0.5 ** 1.5) < 1e-10);
+  padHandlers.pointermove({...event, clientX: 232});
   assert.equal(vm.runInContext('landing.x', context), 9);
-  padHandlers.pointerup({...event, clientX: 224});
+  padHandlers.pointerup({...event, clientX: 232});
   assert.equal(vm.runInContext('flight.to.x', context), 9);
 });
 
