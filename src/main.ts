@@ -1,3 +1,4 @@
+import { trackEvent } from "./analytics";
 import * as THREE from "three";
 import { makeDamage } from "./damage";
 import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
@@ -27,6 +28,19 @@ const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
 const powerFill = document.querySelector<HTMLElement>("#power-fill")!;
 const result = document.querySelector<HTMLDivElement>("#result")!;
 let levelIndex = 0;
+let attempt = 0;
+let attemptStarted = false;
+let attemptSeconds = 0;
+let gameStarted = false;
+let gameCompleted = false;
+function levelEvent(name: string, extra: Record<string, string | number | boolean> = {}) {
+  trackEvent(name, {
+    level: levelIndex + 1, level_name: levels[levelIndex].name,
+    attempt, flips, claims: hits,
+    duration_seconds: Math.round(attemptSeconds),
+    ...extra,
+  });
+}
 const roundScores: RoundScore[] = [];
 const start = new THREE.Vector3();
 const target = new THREE.Vector3();
@@ -37,6 +51,7 @@ try {
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 } catch {
   document.querySelector<HTMLElement>("#error")!.hidden = false;
+  trackEvent("game_error", { reason: "webgl_unavailable" });
   throw new Error("WebGL unavailable");
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -414,6 +429,16 @@ function launch() {
   const distance = position.distanceTo(landing);
   clearAim();
   if (distance < 0.3 || won || flight) return;
+  if (!attemptStarted) {
+    attemptStarted = true;
+    attempt++;
+    attemptSeconds = 0;
+    if (!gameStarted) {
+      trackEvent("game_started");
+      gameStarted = true;
+    }
+    levelEvent("level_started");
+  }
   flips += distance > 5.5 ? 2 : 1;
   flipsLabel.textContent = String(flips);
   flight = {
@@ -439,7 +464,10 @@ function launch() {
         ? "Two flips. The sign said zero."
         : "The sign is more of a suggestion.";
 }
-function reset() {
+function reset(reason: "retry" | "next" | "initial" = "retry") {
+  if (reason === "retry" && attemptStarted) levelEvent("level_retried", { completed: won });
+  attemptStarted = false;
+  if (reason === "next") attempt = 0;
   cancelInput();
   aimKeys.clear();
   keyboardAiming = false;
@@ -577,6 +605,11 @@ function finishFlight() {
       cones: cones.filter((cone) => cone.mesh.visible && cone.hit).length,
     };
     const final = levelIndex === levels.length - 1;
+    levelEvent("level_completed", roundScores[levelIndex]);
+    if (final && !gameCompleted) {
+      trackEvent("game_completed", { ...runTotal(roundScores), levels: levels.length });
+      gameCompleted = true;
+    }
     const score = final ? runTotal(roundScores) : roundScores[levelIndex];
     document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
@@ -730,8 +763,12 @@ document.querySelector("#again")!.addEventListener("click", () => {
 nextButton.addEventListener("click", () => {
   if (!won) return;
   levelIndex = (levelIndex + 1) % levels.length;
-  if (levelIndex === 0) roundScores.length = 0;
-  reset();
+  if (levelIndex === 0) {
+    roundScores.length = 0;
+    gameStarted = false;
+    gameCompleted = false;
+  }
+  reset("next");
   stage.focus({ preventScroll: true });
 });
 function updateShareLinks() {
@@ -759,9 +796,11 @@ function updateShareLinks() {
 async function copyLink(version: number) {
   try {
     await navigator.clipboard.writeText(shareLink.value);
+    levelEvent("share_result", { method: "clipboard", outcome: "copied" });
     if (version === shareVersion) shareStatus.textContent = "Link copied.";
   } catch {
     if (version !== shareVersion) return;
+    levelEvent("share_result", { method: "clipboard", outcome: "manual_copy_required" });
     shareLink.hidden = false;
     shareLink.focus();
     shareLink.select();
@@ -773,6 +812,7 @@ for (const button of shareButtons)
     cancelInput();
     if (sharing) return;
     const version = shareVersion;
+    levelEvent("share_clicked", { method: typeof navigator.share === "function" ? "native" : "clipboard", placement: button.closest("#result") ? "result" : "header", completed: won });
     if (!navigator.share) {
       await copyLink(version);
       return;
@@ -788,7 +828,9 @@ for (const button of shareButtons)
           won ? (levelIndex === levels.length - 1 ? { ...runTotal(roundScores), completedLots: levels.length } : { flips, hits, lot: levels[levelIndex].name }) : undefined,
         ),
       );
+      levelEvent("share_result", { method: "native", outcome: "resolved" });
     } catch (error) {
+      levelEvent("share_result", { method: "native", outcome: error instanceof DOMException && error.name === "AbortError" ? "cancelled" : "failed" });
       if (
         version === shareVersion &&
         !(error instanceof DOMException && error.name === "AbortError")
@@ -817,11 +859,12 @@ function resize() {
 }
 new ResizeObserver(resize).observe(stage);
 resize();
-reset();
+reset("initial");
 let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
+  if (attemptStarted && !won && !document.hidden) attemptSeconds += dt;
   updateKeyboardAim(dt);
   if (aim.visible && !flight && !won) updateAimFeedback();
   if (trolley.root.visible && !won && !trolleyDamage.damaged) {
@@ -902,4 +945,15 @@ renderer.setAnimationLoop((now: number) => {
   contactShadow.update(pivot);
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
+});
+
+for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-social]")) {
+  link.addEventListener("click", () => levelEvent("share_clicked", {
+    method: link.dataset.social!,
+    placement: link.closest("#result") ? "result" : "header",
+    completed: won,
+  }));
+}
+window.addEventListener("pagehide", () => {
+  if (attemptStarted && !won) levelEvent("level_exit");
 });

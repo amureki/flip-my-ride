@@ -26,6 +26,9 @@ function inputFixture() {
   const trolleyDamage = {damaged: false}, levels = [{}], levelIndex = 0;
   const aimSymbols = Array.from({length: 3}, () => ({visible: false, material: {color: new THREE.Color()}}));
   let won = false, flight = null, flips = 0, touchdown = 1;
+  let attemptStarted = false, attempt = 0, attemptSeconds = 0, gameStarted = false;
+  function trackEvent() {}
+  function levelEvent() {}
   const trolleyTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};
   const suspension = {position: new THREE.Vector3()};
@@ -42,7 +45,7 @@ function inputFixture() {
   function reset() {position.set(0, 0, 0); landing.copy(position); flight = null; cancelInput()}
   function worldAt(x, y) {return y > 600 ? new THREE.Vector3() : new THREE.Vector3(x, 0, y)}
   `;
-  const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset()'));
+  const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset('));
   const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('document.querySelector("#reset")'));
   vm.runInContext(ts.transpile(fixture + functions + events), context);
   return {handlers, padHandlers, keys, context};

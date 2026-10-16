@@ -43,6 +43,26 @@ Run this once in each browser profile and device. It excludes future visits; it 
 
 To enable tracking again, run `localStorage.removeItem('umami.disabled')` in the site's browser console and reload.
 
+#### Game events
+
+Events use [Umami's custom event API](https://docs.umami.is/docs/tracker-functions) and follow the same domain and DevTools opt-out rules as pageviews.
+
+| Event | Meaning |
+| --- | --- |
+| `game_started` | First valid flip in a run; Play again starts a new run. |
+| `level_started` | First valid flip in an attempt, including after Retry. |
+| `level_completed` | Parking succeeds; includes damage counts. |
+| `level_retried` | Retry after an attempt starts; `completed` separates replaying a cleared level from retrying an unfinished one. |
+| `level_exit` | Page leaves during an unfinished attempt; best effort, not a reliable abandonment count. |
+| `game_completed` | Final level cleared, once per run; includes totals for the saved level scores. |
+| `share_clicked` | Sharing control used; includes method, header/result placement, and completion state. |
+| `share_result` | Native share resolved/cancelled/failed, clipboard copied, or manual copy required. |
+| `game_error` | WebGL initialization failed. |
+
+Level events include the level number/name, attempt number, flips, claims, and visible gameplay seconds since the attempt's first flip. Duration excludes hidden-tab time, waiting before the first flip. Game totals use saved scores, not discarded retries. Share results cannot confirm that a post was published or delivered; manual-copy fallback cannot confirm copying.
+
+Compare level starts and completions by level in Umami, then inspect retries, duration, and claims for difficult sections. Use sessions/funnels for player progression: raw counts include repeat attempts. Compare pageviews with game starts for visitors who never play, and completions with share clicks for sharing interest. Exit events can be lost when browsers close; do not treat missing exit events as continued play. These signals show behavior, not whether players enjoyed a level.
+
 ### GitHub Pages
 
 Push the repository to GitHub with a `main` branch. Select **Settings → Pages → Source → GitHub Actions**. The included `.github/workflows/deploy.yml` builds and deploys on pushes to `main`, or manually. Change the workflow branch if needed.
