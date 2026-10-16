@@ -114,9 +114,23 @@ kbd {
   color: #444b55;
   font-size: 12px;
 }
-.instructions small {
-  font-size: 10px;
+.game-credit {
+  font-size: 12px;
   color: #535c67;
+}
+.game-credit a {
+  display: inline-block;
+  padding-block: 4px;
+  color: inherit;
+  text-underline-offset: 3px;
+  pointer-events: auto;
+}
+.game-credit a:hover {
+  color: #16191d;
+}
+.game-credit a:focus-visible {
+  outline: 3px solid #1865d8;
+  outline-offset: 3px;
 }
 .power {
   width: 100px;
@@ -482,7 +496,7 @@ button:disabled {
 @media (pointer: coarse) {
   #app {
     --pad-height: 160px;
-    --controls-height: calc(var(--pad-height) + 110px + env(safe-area-inset-bottom));
+    --controls-height: calc(var(--pad-height) + 136px + env(safe-area-inset-bottom));
   }
   #stage {
     top: max(90px, calc(env(safe-area-inset-top) + 76px));
