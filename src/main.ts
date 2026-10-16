@@ -627,8 +627,8 @@ function launch(replayMove?: ReplayMove) {
     distance >= 8.9
       ? "You are cleared for parking."
       : distance > 5.5
-        ? "Two flips. The sign said zero."
-        : "The sign is more of a suggestion.";
+        ? "Two flips. Zero driving lessons."
+        : "Taking parking to another level.";
 }
 function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   if (reason === "retry" && attemptStarted) levelEvent("level_retried", { completed: won });
@@ -783,7 +783,7 @@ function finishFlight() {
   if (hits === previousHits)
     message.textContent = clearedCar
       ? "Traffic avoided. Parking still required."
-      : "Landed. The sign still says no.";
+      : "Landed. Parking remains a work in progress.";
   burst(position, reducedMotion.matches ? 4 : Math.round(8 + landingStrength * 10),
     reducedMotion.matches ? 0.25 : 0.35 + landingStrength * 0.5);
   // Require the complete upright car footprint to fit inside the parking bay.
@@ -832,12 +832,15 @@ function finishFlight() {
     document.querySelector("#receipt-repairs")!.textContent = score.cars + score.trolleys + score.cones ? "We’ll be in touch." : "€0. Somehow.";
     result.hidden = false;
     document.querySelector("#result-title")!.textContent = final ? "Licence to Flip" : hits ? "Crash landing. Still parking." : "Parkour. But parked.";
-    document.querySelector("#result-detail")!.textContent = final ? licenceVerdict(score.hits)
+    document.querySelector("#result-detail")!.textContent = final ? `${levels[levelIndex].parkedReply} ${licenceVerdict(score.hits)}`
       : score.cars ? "Cars flattened. Now that’s compact parking."
       : score.trolleys ? "Off your trolley. Into your spot."
       : score.cones ? "Cone-gratulations. You made an impression."
       : score.hits ? "A few claims to fame."
       : levels[levelIndex].parkedReply;
+    document.querySelector("#result .receipt-footer")!.textContent = final && easterEggs.snapshot().hat
+      ? "All hail the Cone-queror. Long may you park."
+      : "Thank you for parking with a twist.";
     message.textContent =
       levelIndex === levels.length - 1
         ? `All ${levels.length} lots parked. You earned that licence. Somehow.`

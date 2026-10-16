@@ -108,6 +108,8 @@ Each lot has a curbside sign with a hidden reply and at least one cone. A clear 
 
 The first cone hit gives the Roadster a cone hat, retained through subsequent flips.
 
+Completing the final lot while wearing the cone hat reveals “All hail the Cone-queror. Long may you park.” in the final receipt footer. The final receipt always pairs the final lot’s parking punchline with the run’s claim-based licence verdict.
+
 Contact with a parked car shows small, camera-facing "beep!" speech bubbles alternating above that car and the Roadster. First contact gets one exchange; a second landing on the same car gets two exchanges. Each bubble lasts 0.7 seconds with a short gap, without bouncing or sound. The bubbles follow the cars and clear on Retry, results, and replay. Discovery captions remain available to screen readers. Wrecks do not add repeat claims. A third landing on the same car discovers "This is fine · The warranty has left the chat." Crushing a moving car discovers "Traffic jam · You made it permanent." These use the same once-per-run discovery queue and remain silent in replay. Players can complete every lot without finding these discoveries.
 
 A small off-white discovery banner uses 13px text beneath the lot information, stays for 3.5 seconds, and queues simultaneous discoveries. It does not capture input or animate. Each caption appears once per seven-lot run, including across retries. All discoveries are silent; there is no audio control. Retry and lot changes reset props and pending effects. Replay reconstructs the props silently and restores the completed state when exited.
