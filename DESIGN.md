@@ -49,3 +49,7 @@ Warm directional sunlight and cool sky fill use filmic tone mapping and filtered
 Round receipts use parking-citation jokes. The final Licence to Flip shows completed-lot count and totals across completed rounds, with a claim-based verdict and an UNFIT FOR NORMAL ROADS stamp. Retrying replaces the current round score; starting a new run clears totals. Sharing remains primary.
 
 Unexpected Item introduces timing in the third lot. A wire shopping trolley with a red handle and one wobbling wheel crosses the target bay. Reduced motion removes the decorative wobble, retaining the gameplay movement. Collision is checked only on landing. Last Space combines crowded route planning with a trolley moving along the final approach; its intermediate landing gaps remain safe.
+
+## Ground
+
+Asphalt uses a single seeded 1024-pixel texture with fine low-contrast grain, three faint paired tire marks, and lightly chipped parking lines. Surface detail is generated once and remains stable across retries and replays. The green target bay stays crisp. The texture uses mipmaps and bounded anisotropic filtering to limit shimmer at the game camera angle.

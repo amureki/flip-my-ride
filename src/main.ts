@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { makeAsphalt } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
@@ -90,13 +91,7 @@ function box(
 box(22, 0.5, 20, 0xa8b1a5, 0, -0.6, 0);
 box(18.8, 0.3, 16, 0xc8cbce, 0, -0.28, 0);
 box(18, 0.1, 15, 0x737b83, 0, -0.08, 0);
-// Parking markings are flat geometry so the lot needs no external textures.
-for (const z of [-6.4, 6.4]) {
-  for (let x = -7.8; x < 9; x += 3)
-    box(0.06, 0.012, 2.8, 0xe9ecef, x, 0.002, z > 0 ? z - 0.9 : z + 0.9);
-  box(15, 0.012, 0.06, 0xe9ecef, -0.3, 0.002, z);
-}
-for (let z = -2; z <= 2; z += 1.5) box(0.09, 0.015, 0.6, 0xbfc4b1, 0, 0.006, z);
+scene.add(makeAsphalt(renderer.capabilities.getMaxAnisotropy()));
 const parkingBay = new THREE.Group();
 scene.add(parkingBay);
 box(2.7, 0.018, 4.1, 0x96bb69, 0, 0.012, 0, parkingBay);
