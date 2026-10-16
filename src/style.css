@@ -364,7 +364,7 @@ button:disabled {
     max-width: 42px;
   }
 }
-#lot-label {
+.lot-info {
   position: absolute;
   top: max(64px, calc(env(safe-area-inset-top) + 48px));
   left: 20px;
@@ -387,7 +387,7 @@ button:disabled {
   color: inherit;
 }
 @media (max-width: 600px) {
-  #lot-label {
+  .lot-info {
     left: 12px;
   }
 }
@@ -654,14 +654,14 @@ button:disabled {
   header .score {
     margin-left: 0;
   }
-  #lot-label {
+  .lot-info {
     top: max(58px, calc(env(safe-area-inset-top) + 50px));
     left: auto;
     right: var(--sidebar-right);
     width: var(--sidebar-width);
   }
   .game-controls {
-    top: max(84px, calc(env(safe-area-inset-top) + 76px));
+    top: max(104px, calc(env(safe-area-inset-top) + 96px));
     left: auto;
     right: var(--sidebar-right);
     width: var(--sidebar-width);
@@ -776,3 +776,13 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   .game-controls .mobile-hint { transition: none; }
 }
+
+#lot-label { margin: 0; }
+#par-goal { margin: 5px 0 0; font-size: 11px; font-weight: normal; }
+#receipt-par { font-weight: bold; }
+#receipt-levels { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; }
+#receipt-levels caption { text-align: left; font-weight: bold; margin-bottom: 8px; }
+#receipt-levels th, #receipt-levels td { padding: 4px 3px; line-height: 1.25; border-bottom: 1px dashed #d5d5d5; text-align: right; vertical-align: top; }
+#receipt-levels th:first-child { text-align: left; width: 44%; }
+#receipt-levels tbody th { font-weight: normal; }
+#receipt-levels td { font-variant-numeric: tabular-nums; }

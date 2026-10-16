@@ -15,3 +15,7 @@ export function licenceVerdict(hits: number) {
     : hits <= 3 ? "Passed. Insurer appealed."
     : "Licensed by a technicality.";
 }
+
+export function meetsCleanPar(score: Pick<RoundScore, "flips" | "hits">, par: number) {
+  return score.hits === 0 && score.flips <= par;
+}

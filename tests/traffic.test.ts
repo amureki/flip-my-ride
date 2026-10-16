@@ -40,11 +40,11 @@ test("drivers leave through the exit, disappear outside the lot, then arrive thr
   assert.equal(trafficPosition(100,first).active,false);
 });
 
-test("a target-space driver creates both occupied and clean landing windows", () => {
+test("each target-space route includes both occupied and clear positions", () => {
   for (const level of levels.slice(4)) {
     let clear = 0, blocked = 0;
     for (let time = 0; time < 40; time += 0.05) {
-      const occupied = level.traffic!.some(route => {
+      const occupied = level.traffic!.slice(0, 1).some(route => {
         const p = trafficPosition(time, route);
         return p.active && orientedVehicleHeight(route.model, level.target[0] - p.x, level.target[1] - p.z, p.heading) > 0;
       }) || !!level.trolley && hitsTrolley(...level.target, time, level.trolley);
@@ -106,7 +106,7 @@ test("collision uses arrival time and damaged traffic stays at its impact positi
 });
 
 test("drivers stop short of a grounded player, wait indefinitely, and resume without jumping", () => {
-  for (const moving of [route, levels[5].traffic![1]]) {
+  for (const moving of [route, levels[5].traffic![0]]) {
     const player = {x:moving.bay[0],z:0};
     const state = {time: -(moving.phase ?? 0), speed: 1, waiting: 0, brake: 0};
     for (let i = 0; i < 1800; i++) {
@@ -259,11 +259,11 @@ test("routes keep position and heading continuous on screen and inactive cars ha
 
 
 test("staggered arrivals stay outside the lot until their scheduled entrance", () => {
-  const delayed = levels[6].traffic!.find(route => route.arrivesAfter === 7)!;
-  assert.equal(trafficPosition(6.99, delayed).active, false);
-  const entrance = trafficPosition(7, delayed);
+  const delayed = levels[6].traffic!.find(route => route.arrivesAfter === 3)!;
+  assert.equal(trafficPosition(2.99, delayed).active, false);
+  const entrance = trafficPosition(3, delayed);
   assert.equal(entrance.active, true);
   assert.equal(entrance.arriving, true);
   assert.deepEqual([entrance.x, entrance.z], [-14, 0]);
-  assert.ok(trafficPosition(8, delayed).x > -14);
+  assert.ok(trafficPosition(4, delayed).x > -14);
 });

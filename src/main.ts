@@ -13,7 +13,7 @@ import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { levels } from "./levels";
 import { makeTrolley, hitsTrolley, trolleyPosition } from "./trolley";
-import { runTotal, licenceVerdict, type RoundScore } from "./receipt";
+import { runTotal, licenceVerdict, meetsCleanPar, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
 type ReplayMove = {
   drivers: DriverState[];
@@ -682,6 +682,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   updateTraffic(0);
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
+  document.querySelector("#par-goal")!.textContent = `Clean par: ≤${level.par} ${level.par === 1 ? "flip" : "flips"} · 0 claims`;
   const completedLastLot = levelIndex === levels.length - 1;
   nextButton.textContent = completedLastLot ? "Play again" : "Next lot";
   nextButton.classList.toggle("secondary", completedLastLot);
@@ -807,6 +808,26 @@ function finishFlight() {
     document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
     document.querySelector("#receipt-claims")!.textContent = String(score.hits);
+    const breakdown = document.querySelector<HTMLTableElement>("#receipt-levels")!;
+    breakdown.hidden = !final;
+    breakdown.tBodies[0].replaceChildren();
+    if (final) roundScores.forEach((round, i) => {
+      const row = breakdown.tBodies[0].insertRow();
+      const name = document.createElement("th");
+      name.scope = "row";
+      name.textContent = `${i + 1}. ${levels[i].name}`;
+      row.append(name);
+      row.insertCell().textContent = String(round.flips);
+      row.insertCell().textContent = String(round.hits);
+      const par = row.insertCell();
+      par.textContent = meetsCleanPar(round, levels[i].par) ? "Earned" : "Missed";
+      par.append(document.createElement("br"), `≤${levels[i].par} ${levels[i].par === 1 ? "flip" : "flips"}`);
+    });
+    const cleanPars = roundScores.filter((round, i) => meetsCleanPar(round, levels[i].par)).length;
+    document.querySelector("#receipt-par")!.textContent = final
+      ? `${cleanPars}/${levels.length} clean pars earned`
+      : meetsCleanPar(score, levels[levelIndex].par) ? "Clean par earned. Par-king perfection."
+      : `Clean par: ≤${levels[levelIndex].par} flips, 0 claims. Retry for the badge.`;
     document.querySelector("#receipt-heading")!.textContent = final ? "Final receipt" : "Parking receipt";
     document.querySelector("#receipt-repairs")!.textContent = score.cars + score.trolleys + score.cones ? "We’ll be in touch." : "€0. Somehow.";
     result.hidden = false;

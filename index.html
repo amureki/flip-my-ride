@@ -82,6 +82,12 @@
               <div><dt>Repair bill</dt><dd id="receipt-repairs"></dd></div>
             </dl>
             <p id="result-detail"></p>
+            <p id="receipt-par"></p>
+            <table id="receipt-levels" hidden>
+              <caption>Per-level results</caption>
+              <thead><tr><th scope="col">Level</th><th scope="col">Flips</th><th scope="col">Claims</th><th scope="col">Clean par</th></tr></thead>
+              <tbody></tbody>
+            </table>
             <p class="receipt-footer">Thank you for parking with a twist.</p>
           </section>
           </div>
@@ -274,7 +280,7 @@
           Retry <kbd>R</kbd>
         </button>
       </header>
-      <p id="lot-label" aria-live="polite"></p>
+      <div class="lot-info"><p id="lot-label" aria-live="polite"></p><p id="par-goal"></p></div>
       <div id="discovery" role="status" aria-live="polite" aria-atomic="true" hidden></div>
       <aside id="rotation-hint" hidden aria-label="Screen orientation tip">
         <p>Want a bigger view? Turn your phone sideways.</p>
