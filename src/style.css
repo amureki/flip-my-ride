@@ -530,7 +530,7 @@ button:disabled {
   margin-left: auto;
 }
 @media (pointer: coarse) {
-  header nav {
+  header .social-options {
     display: none;
   }
   header h1 {
