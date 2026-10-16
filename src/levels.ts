@@ -29,7 +29,7 @@ export const levels: readonly Level[] = [
   },
   {
     name: "Full Lot",
-    hint: "One free space. The cars are obstacles, not stepping stones.",
+    hint: "One free space. Getting there without a claim is the hard part.",
     start: [-6.3, 0],
     target: [2.7, -4.9],
     cars: [
@@ -51,7 +51,7 @@ export const levels: readonly Level[] = [
   {
     name: "Unexpected Item",
     trolley: { from: [0.8, -3.7], to: [6.4, -3.7] },
-    hint: "Wait for a clear landing. The trolley has right of way. Apparently.",
+    hint: "The trolley has right of way. Your insurance recommends respecting it.",
     start: [-5.5, 4.8],
     target: [4.2, -3.7],
     cars: [
@@ -69,7 +69,7 @@ export const levels: readonly Level[] = [
   {
     name: "Last Space",
     trolley: { from: [6, -5.4], to: [6, -1.8] },
-    hint: "Find the gaps. Then time the last landing. The trolley wants a rematch.",
+    hint: "The last space. Can you reach it without flattening the lot?",
     start: [-6, 5],
     target: [6, -5],
     cars: [

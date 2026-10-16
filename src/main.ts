@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { makeDamage } from "./damage";
 import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
 import { makeAsphalt } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -182,6 +183,7 @@ for (const y of [1.92, 3.78]) {
 scene.add(sign);
 const trolley = makeTrolley();
 scene.add(trolley.root);
+const trolleyDamage = makeDamage(trolley.root, "trolley");
 let trolleyTime = 0;
 const parkedCars: THREE.Group[] = [];
 // Reuse scene objects across lots and retries instead of allocating new meshes.
@@ -195,6 +197,7 @@ for (
   scene.add(parked);
   parkedCars.push(parked);
 }
+const carDamage = parkedCars.map((parked) => makeDamage(parked, "car"));
 const { car, jets, sideJets, exhausts, suspension } = makeRoadster();
 const exhaust = makeExhaust(scene, exhausts);
 const contactShadow = makeContactShadow(scene);
@@ -377,10 +380,10 @@ function updateAimFeedback() {
   const outside =
     Math.abs(landing.x) > bounds.x - 0.8 ||
     Math.abs(landing.z) > bounds.z - 1.3;
-  const obstacle = parkedCars.some((other) => other.visible &&
+  const obstacle = parkedCars.some((other, index) => other.visible && !carDamage[index].damaged &&
     Math.abs(landing.x - other.position.x) < 1.5 && Math.abs(landing.z - other.position.z) < 2.65) ||
     cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6) ||
-    (!!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
+    (!trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
       trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + position.distanceTo(landing) * 0.075), levels[levelIndex].trolley!));
   const state = outside ? 2 : obstacle ? 1 : 0;
   const color = [0xfff5ce, 0xe9b657, 0xdc6839][state];
@@ -448,6 +451,8 @@ function reset() {
   pivot.scale.set(1, 1, 1);
   const level = levels[levelIndex];
   trolleyTime = 0;
+  trolleyDamage.restore(false);
+  carDamage.forEach((damage) => damage.restore(false));
   trolley.root.visible = !!level.trolley;
   if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   start.set(level.start[0], 0, level.start[1]);
@@ -474,6 +479,7 @@ function reset() {
   won = false;
   flipsLabel.textContent = "0";
   result.hidden = true;
+  document.querySelector<HTMLDetailsElement>(".receipt-details")!.open = false;
   clearAim();
   shareVersion++;
   sharing = false;
@@ -490,6 +496,7 @@ function reset() {
     cone.mesh.visible = !!point;
     if (point) cone.mesh.position.set(point[0], 0, point[1]);
     cone.mesh.rotation.set(0, 0, 0);
+    cone.mesh.scale.setScalar(1);
   });
   for (const particle of particles) {
     scene.remove(particle.mesh);
@@ -505,7 +512,8 @@ function finishFlight() {
   const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
-  const trolleyHit = !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12), levels[levelIndex].trolley!);
+  const impactTime = flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12);
+  const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + (reducedMotion.matches ? 0 : 0.12), levels[levelIndex].trolley!);
   flight = null;
   pivot.rotation.set(0, 0, 0);
   if (
@@ -517,17 +525,20 @@ function finishFlight() {
     message.textContent =
       "Out of bounds. Returned to your last questionable decision.";
   } else {
-    const collided = parkedCars.some(
-      (other) =>
-        other.visible &&
-        Math.abs(position.x - other.position.x) < 1.5 &&
-        Math.abs(position.z - other.position.z) < 2.65,
-    );
-    if (collided || trolleyHit) {
-      position.copy(oldPosition);
+    let crushed = false;
+    parkedCars.forEach((other, index) => {
+      if (other.visible && Math.abs(position.x - other.position.x) < 1.5 &&
+          Math.abs(position.z - other.position.z) < 2.65 && carDamage[index].crush(reducedMotion.matches)) {
+        hits++;
+        crushed = true;
+      }
+    });
+    if (crushed) message.textContent = "Roof lowered. Resale value also lowered.";
+    if (trolleyHit) {
+      trolley.update(impactTime, reducedMotion.matches, levels[levelIndex].trolley!);
+      trolleyDamage.crush(reducedMotion.matches);
       hits++;
-      message.textContent =
-        trolleyHit ? "Unexpected item in the parking area. Claim filed." : "Car hit. Your insurer has left the chat. Try another landing.";
+      message.textContent = "Unexpected item: one trolley pancake.";
     }
     for (const cone of cones)
       if (
@@ -538,8 +549,7 @@ function finishFlight() {
       ) {
         cone.hit = true;
         hits++;
-        cone.mesh.rotation.z = 1.4;
-        cone.mesh.position.x += 0.6;
+        cone.mesh.scale.set(1.3, 0.12, 1.3);
         message.textContent = "That cone had a family.";
       }
   }
@@ -560,13 +570,31 @@ function finishFlight() {
     Math.abs(position.z - target.z) <= 0.68
   ) {
     won = true;
-    roundScores[levelIndex] = { flips, hits };
+    roundScores[levelIndex] = {
+      flips, hits,
+      cars: carDamage.filter((damage, index) => parkedCars[index].visible && damage.damaged).length,
+      trolleys: trolleyDamage.damaged ? 1 : 0,
+      cones: cones.filter((cone) => cone.mesh.visible && cone.hit).length,
+    };
     const final = levelIndex === levels.length - 1;
-    const score = final ? runTotal(roundScores) : { flips, hits };
+    const score = final ? runTotal(roundScores) : roundScores[levelIndex];
     document.querySelector("#receipt-heading")!.textContent = final ? "Licence to Flip" : "Parking citation";
     document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
     document.querySelector("#receipt-flips")!.textContent = String(score.flips);
     document.querySelector("#receipt-claims")!.textContent = String(score.hits);
+    for (const [kind, pun] of [
+      ["cars", "Complimentary compact upgrade."],
+      ["trolleys", "Basket case."],
+      ["cones", "Traffic de-coned."],
+    ] as const) {
+      document.querySelector(`#receipt-${kind}`)!.textContent = String(score[kind]);
+      const joke = document.querySelector<HTMLElement>(`#receipt-${kind}-pun`)!;
+      joke.textContent = score[kind] ? pun : "";
+      joke.hidden = !score[kind];
+    }
+    const damageCount = score.cars + score.trolleys + score.cones;
+    document.querySelector("#receipt-boundaries")!.textContent = String(score.hits - damageCount);
+    document.querySelector("#receipt-repairs")!.textContent = damageCount ? "We’ll be in touch." : "€0 — Somehow.";
     document.querySelector("#receipt-insurance")!.textContent = score.hits ? "Please stop calling" : "Suspiciously intact";
     document.querySelector("#receipt-stamp")!.textContent = final ? "UNFIT FOR NORMAL ROADS" : ["NEIGHBOURHOOD AIR TRAFFIC", "OVERBOOKED. OVERFLIPPED.", "UNEXPECTED ITEM: YOUR CAR"][levelIndex];
     result.hidden = false;
@@ -777,7 +805,7 @@ renderer.setAnimationLoop((now: number) => {
   last = now;
   updateKeyboardAim(dt);
   if (aim.visible && !flight && !won) updateAimFeedback();
-  if (trolley.root.visible && !won) {
+  if (trolley.root.visible && !won && !trolleyDamage.damaged) {
     trolleyTime += dt;
     if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
   }
@@ -850,6 +878,8 @@ renderer.setAnimationLoop((now: number) => {
       particles.splice(i, 1);
     }
   }
+  carDamage.forEach((damage) => damage.update(dt, reducedMotion.matches));
+  trolleyDamage.update(dt, reducedMotion.matches);
   contactShadow.update(pivot);
   exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);

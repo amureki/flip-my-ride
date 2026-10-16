@@ -13,7 +13,7 @@ npm run dev
 
 Drag anywhere on the lot in the direction you want to jump. Drag farther for more power; the ring shows the landing point. Release to flip. On a keyboard, hold arrows or WASD to move the landing marker (combine direction keys for diagonals), then press Space to jump. Press R or Retry to reset, including during a jump.
 
-Cones count as insurance claims. Landing on a parked car or outside the lot returns the player to the previous position. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
+Land on cars, trolleys, or cones to flatten them and continue from the landing point. Each object adds one insurance claim the first time it is crushed. Wrecks remain until Retry or the next lot; landing on a wreck adds no further claim. Landing outside the lot still returns the player to the previous position. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
 
 ## Lots
 
@@ -77,4 +77,4 @@ The native action uses the device share sheet when available; otherwise it copie
 
 Run local share URL and text checks with npm test.
 
-In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Only landing on it files a claim and returns the car to its previous position. Retry restarts the cycle.
+In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle.

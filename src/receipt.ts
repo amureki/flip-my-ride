@@ -1,10 +1,13 @@
-export type RoundScore = { flips: number; hits: number };
+export type RoundScore = { flips: number; hits: number; cars: number; trolleys: number; cones: number };
 
 export function runTotal(rounds: readonly RoundScore[]): RoundScore {
   return rounds.reduce((total, round) => ({
     flips: total.flips + round.flips,
     hits: total.hits + round.hits,
-  }), { flips: 0, hits: 0 });
+    cars: total.cars + round.cars,
+    trolleys: total.trolleys + round.trolleys,
+    cones: total.cones + round.cones,
+  }), { flips: 0, hits: 0, cars: 0, trolleys: 0, cones: 0 });
 }
 
 export function licenceVerdict(hits: number) {

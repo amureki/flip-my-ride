@@ -57,3 +57,11 @@ Asphalt uses a single seeded 1024-pixel texture with fine low-contrast grain, th
 ## Scene consistency
 
 The lot base uses softly rounded edges and fine curb joints. Trees use tapered trunks and three compact faceted crown masses with restrained green variation. The target bay has a muted green fill with crisp pale borders and a clear P. A thin landing ring uses a check for clear ground, an amber exclamation for collision risk, and an orange cross outside the lot. Symbols remain visible over obstacles. Collision warnings include cars, cones, and the predicted trolley position. The warning updates while aiming, including when the trolley moves.
+
+## Crush and continue
+
+Landing on parked cars or the trolley keeps the player at the landing point. Each newly crushed object adds one claim; overlapping objects each count once. Cars compress into broad wrecks with splayed wheels. The trolley flattens and stops at its exact impact position. Cones flatten in place. Damage remains through later jumps and the score screen, and resets on Retry or the next lot. Reduced motion applies the final damage immediately. Out-of-bounds landings still return to the previous position. Clean parking means finishing without claims; destruction never blocks completion.
+
+Receipts itemize cars flattened, trolleys crushed, cones flattened, and out-of-bounds claims. Damage-specific puns appear only for nonzero counts. The repair bill is “We’ll be in touch.” after damage and “€0 — Somehow.” otherwise. The final licence totals these categories across completed lots; Retry replaces the current lot’s score.
+
+The result uses a compact score section and a separate action section. Damage counts sit in three columns; supplementary insurance details and damage puns are under native “Fine print” disclosure. The repair-bill joke remains visible. Actions retain 44px targets and never scroll with the receipt. Short landscape screens place actions beside the score; on other screens they sit below it. The score section alone scrolls when expanded or under text enlargement. The result fits the dynamic viewport and hides gameplay hints while open.

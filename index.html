@@ -68,20 +68,40 @@
         aria-label="Parking game. Drag in a direction and release to flip. Hold arrows or WASD to move the landing marker, combine direction keys for diagonals, and press Space to flip. R to retry."
       >
         <div id="result" hidden>
+          <div class="result-score">
           <h2 id="result-title">Parked.</h2>
           <p id="result-detail"></p>
           <section class="receipt" aria-labelledby="receipt-heading">
             <h3 id="receipt-heading">Parking citation</h3>
             <p id="receipt-progress"></p>
-            <dl>
+            <dl class="receipt-totals">
               <div><dt>Flips</dt><dd id="receipt-flips">0</dd></div>
               <div><dt>Claims filed</dt><dd id="receipt-claims">0</dd></div>
-              <div><dt>Parking fee</dt><dd>€0</dd></div>
-              <div><dt>Normal driving</dt><dd>Not detected</dd></div>
-              <div><dt>Insurance</dt><dd id="receipt-insurance"></dd></div>
             </dl>
+            <dl class="receipt-damage" aria-label="Objects damaged">
+              <div><dt>Cars flattened</dt><dd id="receipt-cars">0</dd></div>
+              <div><dt>Trolleys crushed</dt><dd id="receipt-trolleys">0</dd></div>
+              <div><dt>Cones flattened</dt><dd id="receipt-cones">0</dd></div>
+            </dl>
+            <dl>
+              <div><dt>Repair bill</dt><dd id="receipt-repairs"></dd></div>
+            </dl>
+            <details class="receipt-details">
+              <summary>Fine print</summary>
+              <p id="receipt-cars-pun" hidden></p>
+              <p id="receipt-trolleys-pun" hidden></p>
+              <p id="receipt-cones-pun" hidden></p>
+              <dl>
+                <div><dt>Out-of-bounds claims</dt><dd id="receipt-boundaries">0</dd></div>
+                <div><dt>Parking fee</dt><dd>€0</dd></div>
+                <div><dt>Normal driving</dt><dd>Not detected</dd></div>
+                <div><dt>Insurance</dt><dd id="receipt-insurance"></dd></div>
+              </dl>
+            </details>
             <p id="receipt-stamp"></p>
           </section>
+          </div>
+          <div class="result-controls">
           <p id="share-score-label" hidden>Share your score</p>
           <div
             class="social-options result-social"
@@ -169,6 +189,7 @@
             ><button id="again" class="secondary">Retry <kbd>R</kbd></button>
           </div>
         </div>
+          </div>
         <div id="error" hidden>
           <h2>3D graphics are unavailable.</h2>
           <p>Try a browser with WebGL enabled.</p>

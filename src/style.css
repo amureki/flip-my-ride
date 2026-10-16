@@ -34,7 +34,7 @@ button:focus-visible {
 #app {
   position: relative;
   height: 100dvh;
-  min-height: 480px;
+
   overflow: hidden;
 }
 #stage {
@@ -138,8 +138,13 @@ kbd {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(320px, 88%);
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding: 16px;
+  overflow: hidden;
+  touch-action: pan-y;
   background: #fff;
   border-radius: 8px;
   text-align: center;
@@ -154,14 +159,36 @@ h2 {
   margin: 0 0 12px;
 }
 #result p {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
+}
+#result h2 {
+  font-size: 22px;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+.result-score {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.result-controls {
+  flex-shrink: 0;
+  padding-top: 8px;
+}
+#result .result-controls button,
+#result .result-controls a {
+  min-height: 44px;
+}
+#result .result-social a,
+#result .result-social button {
+  width: 44px;
 }
 #again {
   width: 100%;
 }
 .receipt {
-  margin: 0 0 18px;
-  padding: 12px 0;
+  margin: 0;
+  padding: 8px 0;
   border-block: 1px dashed #b4bac1;
   text-align: left;
   font-size: 12px;
@@ -215,7 +242,7 @@ h2 {
   #message {
     font-size: 12px;
   }
-}
+  }
 
 button:disabled {
   opacity: 0.5;
@@ -273,11 +300,7 @@ button:disabled {
   font: inherit;
   margin-top: 8px;
 }
-#result {
-  max-height: calc(100% - 32px);
-  overflow-y: auto;
-  touch-action: pan-y;
-}
+
 
 .social-options svg {
   width: 20px;
@@ -352,7 +375,7 @@ button:disabled {
 .result-actions {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 6px;
 }
 .result-actions button {
   flex: 1;
@@ -384,14 +407,70 @@ button:disabled {
   background: #39424d;
 }
 
-#result #receipt-progress { margin: 0 0 12px; }
+#result #receipt-progress { margin: 0 0 6px; }
 #result #receipt-stamp {
-  margin: 14px 0 0;
+  margin: 6px 0 0;
   font-size: 11px;
   font-weight: bold;
   text-align: center;
 }
-.final-lot .receipt h3 { font-size: 24px; text-align: center; }
+.final-lot .receipt h3 { font-size: 16px; text-align: center; }
 .final-lot #receipt-progress { text-align: center; font-weight: bold; }
-.final-lot #receipt-stamp { border: 2px solid currentColor; padding: 8px 4px; }
-#result { max-height: calc(100dvh - 110px); overflow-y: auto; }
+.final-lot #receipt-stamp { border: 2px solid currentColor; padding: 4px; }
+
+
+#result .receipt-damage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+#result .receipt-damage div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.receipt-damage dd {
+  font-size: 16px;
+  font-weight: bold;
+}
+.receipt-details summary {
+  cursor: pointer;
+  padding-block: 8px;
+  min-height: 44px;
+  display: list-item;
+  align-content: center;
+}
+.receipt-details summary:focus-visible {
+  outline: 2px solid #1865d8;
+  outline-offset: -2px;
+}
+#result .receipt-details p {
+  margin: 4px 0;
+}
+#app:has(#result:not([hidden])) > .instructions {
+  visibility: hidden;
+}
+
+
+@media (max-height: 480px) and (min-width: 560px) {
+  #result {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    width: min(640px, calc(100% - 24px));
+  }
+  .result-score {
+    flex: 1;
+    max-height: calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  .result-controls {
+    width: 176px;
+    padding-top: 0;
+  }
+  .result-actions button {
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+}
