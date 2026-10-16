@@ -1,6 +1,7 @@
+import { trafficPosition, orientedVehicleHeight, makeTrafficSignals, type TrafficRoute, type DriverState, advanceTraffic, type TrafficBody } from "./traffic";
 import { makeParkingFeedback, fitsParkingBay } from "./parking-feedback";
 import { makeEasterEggs, type EggState } from "./easter-eggs";
-import { vehicleLandingHeight, vehicleShapes } from "./vehicles";
+import { vehicleShapes } from "./vehicles";
 import { trackEvent } from "./analytics";
 import * as THREE from "three";
 import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
@@ -11,14 +12,15 @@ import { makeContactShadow } from "./contact-shadow";
 import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { levels } from "./levels";
-import { makeTrolley, hitsTrolley } from "./trolley";
+import { makeTrolley, hitsTrolley, trolleyPosition } from "./trolley";
 import { runTotal, licenceVerdict, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
 type ReplayMove = {
+  drivers: DriverState[];
   time: number;
   x: number;
   z: number;
-  trolleyTime: number;
+  levelTime: number;
   duration: number;
   anticipation: number;
 };
@@ -38,7 +40,7 @@ type ReplaySession = {
   moves: ReplayMove[];
   index: number;
   endHold: number;
-  completed: { eggs: EggState; carDamage: boolean[]; trolleyDamage: boolean; trolleyPosition: THREE.Vector3; trolleyRotation: THREE.Euler; trolleyTime: number; position: THREE.Vector3; flips: number; hits: number; message: string; cones: { position: THREE.Vector3; rotation: THREE.Euler; hit: boolean }[] };
+  completed: { drivers: DriverState[]; carPositions: THREE.Vector3[]; eggs: EggState; carDamage: boolean[]; trolleyDamage: boolean; trolleyPosition: THREE.Vector3; trolleyRotation: THREE.Euler; levelTime: number; position: THREE.Vector3; flips: number; hits: number; message: string; cones: { position: THREE.Vector3; rotation: THREE.Euler; hit: boolean }[] };
 };
 let replay: ReplaySession | null = null;
 
@@ -246,20 +248,93 @@ for (const y of [1.92, 3.78]) {
 scene.add(sign);
 const trolley = makeTrolley();
 scene.add(trolley.root);
+const cartDriver: DriverState = { time: 0, speed: 1, waiting: 0, brake: 0 };
 const trolleyDamage = makeDamage(trolley.root, "trolley");
-let trolleyTime = 0;
+let levelTime = 0;
 const carColors = [0xc78051, 0x5b7970, 0xe1b75f, 0x6383a3, 0xa66c70];
-const parkedVehicles = levels.flatMap((level, lot) => level.cars.map(([x, z, model], index) => {
-  const root = makeParkedCar(carColors[index % carColors.length], model);
-  root.position.set(x, 0, z);
-  scene.add(root);
-  return { root, model, lot };
-}));
+const parkedVehicles = levels.flatMap((level, lot) => {
+  const vehicles = [
+    ...level.cars.map(([x, z, model]) => ({ x, z, model, route: undefined as TrafficRoute | undefined })),
+    ...(level.traffic ?? []).map(route => ({ x: route.from[0], z: route.from[1], model: route.model, route })),
+  ];
+  return vehicles.map(({ x, z, model, route }, index) => {
+    const root = makeParkedCar(carColors[index % carColors.length], model);
+    root.position.set(x, 0, z);
+    const signals = route ? makeTrafficSignals(model, root) : undefined;
+    scene.add(root);
+    return { root, model, lot, route, signals, driver: { time: 0, speed: 1, waiting: 0, brake: 0 } };
+  });
+});
 const parkedCars = parkedVehicles.map(({ root }) => root);
-function obstacleHeight(x: number, z: number, halfWidth = 0.75, halfLength = 1.3) {
-  return parkedVehicles.reduce((height, { root, model }, index) => root.visible
-    ? Math.max(height, vehicleLandingHeight(model, x - root.position.x, z - root.position.z, halfWidth, halfLength, carDamage[index]?.roofDrop ?? 0, carDamage[index]?.bodyDrop ?? 0))
-    : height, 0);
+function simulateTraffic(states: DriverState[], seconds: number, grounded: {x: number; z: number} | null) {
+  const bodies: TrafficBody[] = [];
+  if (grounded) bodies.push({ state: {time: 0, speed: 0, waiting: 0, brake: 0}, at: () => grounded, halfX: 0.75, halfZ: 1.3, fixed: true });
+  const cartRoute = levels[levelIndex].trolley;
+  if (cartRoute) {
+    const vertical = cartRoute.from[0] === cartRoute.to[0];
+    bodies.push({state: states[parkedVehicles.length], at: time => trolleyDamage.damaged ? trolley.root.position : trolleyPosition(time, cartRoute),
+      halfX: vertical ? 0.55 : 1.1, halfZ: vertical ? 1.1 : 0.55, fixed: trolleyDamage.damaged});
+  }
+  parkedVehicles.forEach(({root, model, route}, index) => {
+    if (!root.visible) return;
+    const body = vehicleShapes[model].body;
+    const heading = route ? trafficPosition(0, route).heading : root.rotation.y;
+    const cos = Math.abs(Math.cos(heading)), sin = Math.abs(Math.sin(heading));
+    bodies.push({ state: states[index], at: time => route && !carDamage[index].damaged ? trafficPosition(time, route) : root.position,
+      halfX: (cos * body.width + sin * body.length) / 2, halfZ: (sin * body.width + cos * body.length) / 2,
+      fixed: !route || carDamage[index].damaged });
+  });
+  advanceTraffic(bodies, seconds);
+}
+function trafficSnapshot() {
+  return [...parkedVehicles.map(({driver}) => ({...driver})), {...cartDriver}];
+}
+function flightTraffic(time: number) {
+  const states = flight!.drivers.map(driver => ({...driver}));
+  const elapsed = Math.max(0, time - flight!.levelTime);
+  const groundedTime = Math.min(elapsed, flight!.anticipation + 0.15);
+  simulateTraffic(states, groundedTime, flight!.from);
+  simulateTraffic(states, elapsed - groundedTime, null);
+  return states;
+}
+function obstacleHeight(x: number, z: number, halfWidth = 0.75, halfLength = 1.3, time = levelTime, waitingDelay = 0) {
+  const states = trafficSnapshot();
+  if (time > levelTime) {
+    simulateTraffic(states, waitingDelay, position);
+    simulateTraffic(states, Math.max(0, time - levelTime - waitingDelay), null);
+  }
+  return parkedVehicles.reduce((height, { root, model, route }, index) => {
+    if (!root.visible) return height;
+    const point = route && !carDamage[index]?.damaged ? trafficPosition(states[index].time, route) : root.position;
+    return Math.max(height, orientedVehicleHeight(model, x - point.x, z - point.z, root.rotation.y,
+      halfWidth, halfLength, carDamage[index]?.roofDrop ?? 0, carDamage[index]?.bodyDrop ?? 0));
+  }, 0);
+}
+function updateTraffic(time: number, dt = 0) {
+  const waited = parkedVehicles.map(({driver}) => driver.waiting);
+  const previousTimes = parkedVehicles.map(({driver}) => driver.time);
+  const states = flight ? flightTraffic(time) : trafficSnapshot();
+  if (!flight && dt > 0) simulateTraffic(states, dt, position);
+  Object.assign(cartDriver, states[parkedVehicles.length]);
+  parkedVehicles.forEach(({ root, route, signals, driver }, index) => {
+    Object.assign(driver, states[index]);
+    if (!route || !signals) return;
+    signals.reverseLights.visible = false;
+    if (!root.visible || carDamage[index].damaged) { root.rotation.x = 0; return; }
+    const point = trafficPosition(driver.time, route);
+    const nearPlayer = orientedVehicleHeight(route.model, position.x - point.x, position.z - point.z, point.heading, 1.5, 2.2) > 0;
+    if (!flight && !replay && nearPlayer) {
+      if (!waited[index] && driver.waiting) easterEggs.waitForPlayer(index);
+      if (waited[index] < 5 && driver.waiting >= 5)
+        easterEggs.discover("cant-park", "You can’t park there, mate · The queue has opinions.");
+    }
+    signals.reverseLights.visible = driver.time < previousTimes[index] ? !point.reversing : point.reversing;
+    root.position.set(point.x, 0, point.z);
+    root.rotation.y = point.heading;
+    root.rotation.x = reducedMotion.matches ? 0 : Math.sin(driver.brake / 0.35 * Math.PI) * 0.025 * (point.reversing ? -1 : 1);
+  });
+  if (levels[levelIndex].trolley && !trolleyDamage.damaged)
+    trolley.update(cartDriver.time, reducedMotion.matches, levels[levelIndex].trolley!);
 }
 const carDamage = parkedVehicles.map(({ root, model }) => {
   const { roof } = vehicleShapes[model];
@@ -300,12 +375,7 @@ pivot.add(car);
 scene.add(pivot);
 car.position.y = -0.5;
 const cones: { mesh: THREE.Group; hit: boolean }[] = [];
-for (const [x, z] of [
-  [-2, 1.4],
-  [1.4, -0.8],
-  [6.5, -1.5],
-  [-6.8, 1],
-]) {
+for (let i = 0; i < Math.max(...levels.map(level => level.cones.length)); i++) {
   const cone = new THREE.Group();
   box(0.52, 0.07, 0.52, 0x514d3a, 0, 0.04, 0, cone);
   const body = new THREE.Mesh(
@@ -321,7 +391,6 @@ for (const [x, z] of [
   );
   stripe.position.y = 0.4;
   cone.add(stripe);
-  cone.position.set(x, 0, z);
   scene.add(cone);
   cones.push({ mesh: cone, hit: false });
 }
@@ -363,7 +432,7 @@ const aimSymbols = [
   return symbol;
 });
 const aimLine = new THREE.Line(
-  new THREE.BufferGeometry(),
+  new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
   new THREE.LineBasicMaterial({ color: 0xfff5ce }),
 );
 scene.add(aimLine);
@@ -400,6 +469,7 @@ let flips = 0,
   hits = 0,
   won = false;
 let flight: {
+  drivers: DriverState[];
   from: THREE.Vector3;
   to: THREE.Vector3;
   time: number;
@@ -409,7 +479,7 @@ let flight: {
   heading: number;
   rolls: number;
   clearedCar: boolean;
-  trolleyTime: number;
+  levelTime: number;
 } | null = null;
 let pointer: number | null = null;
 let dragStart = new THREE.Vector2();
@@ -442,11 +512,11 @@ function showAim(delta: THREE.Vector3) {
   }
   aim.position.copy(landing);
   aim.visible = true;
-  aimLine.geometry.dispose();
-  aimLine.geometry = new THREE.BufferGeometry().setFromPoints([
-    position.clone().setY(0.08),
-    landing.clone().setY(0.08),
-  ]);
+  const points = aimLine.geometry.getAttribute("position") as THREE.BufferAttribute;
+  points.setXYZ(0, position.x, 0.08, position.z);
+  points.setXYZ(1, landing.x, 0.08, landing.z);
+  points.needsUpdate = true;
+  aimLine.geometry.computeBoundingSphere();
   aimLine.visible = true;
   updateAimFeedback();
 }
@@ -455,10 +525,10 @@ function constrainLanding() {
   landing.z = THREE.MathUtils.clamp(landing.z, -bounds.z + 1.3, bounds.z - 1.3);
 }
 function updateAimFeedback() {
-  const obstacle = obstacleHeight(landing.x, landing.z) > 0 ||
-    cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6) ||
-    (!trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
-      trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + Math.hypot(position.x - landing.x, position.z - landing.z) * 0.075), levels[levelIndex].trolley!));
+  const obstacle = parkedVehicles.some(({ root, model, route }, index) =>
+    root.visible && !route && !carDamage[index]?.damaged &&
+    orientedVehicleHeight(model, landing.x - root.position.x, landing.z - root.position.z, root.rotation.y) > 0) ||
+    cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6);
   const state = obstacle ? 1 : 0;
   const color = [0xfff5ce, 0xe9b657][state];
   (ring.material as THREE.MeshBasicMaterial).color.set(color);
@@ -498,19 +568,27 @@ function launch(replayMove?: ReplayMove) {
   }
   flips += distance > 5.5 ? 2 : 1;
   flipsLabel.textContent = String(flips);
+  const duration = replayMove?.duration ?? (reducedMotion.matches ? 0.8 : 1.15 + distance * 0.075);
+  const anticipation = replayMove?.anticipation ?? (reducedMotion.matches ? 0 : 0.12);
+  if (replayMove) {
+    parkedVehicles.forEach(({ driver }, index) => Object.assign(driver, replayMove.drivers[index]));
+    Object.assign(cartDriver, replayMove.drivers[parkedVehicles.length]);
+  }
+  const drivers = trafficSnapshot();
   flight = {
+    drivers,
     from: position.clone(),
-    to: landing.clone().setY(obstacleHeight(landing.x, landing.z)),
+    to: landing.clone().setY(obstacleHeight(landing.x, landing.z, 0.75, 1.3, levelTime + duration + anticipation, anticipation + 0.15)),
     time: 0,
-    duration: replayMove?.duration ?? (reducedMotion.matches ? 0.8 : 1.15 + distance * 0.075),
-    anticipation: replayMove?.anticipation ?? (reducedMotion.matches ? 0 : 0.12),
+    duration,
+    anticipation,
     height: reducedMotion.matches ? 1 : 2.6 + distance * 0.38,
     rolls: distance > 5.5 ? 2 : 1,
     clearedCar: false,
-    trolleyTime,
+    levelTime,
     heading: Math.atan2(-(landing.x - position.x), -(landing.z - position.z)),
   };
-  if (!replay) moves.push({ time: roundTime, x: landing.x, z: landing.z, trolleyTime, duration: flight.duration, anticipation: flight.anticipation });
+  if (!replay) moves.push({ drivers, time: roundTime, x: landing.x, z: landing.z, levelTime, duration: flight.duration, anticipation: flight.anticipation });
   touchdown = 1;
   suspension.position.y = 0;
   shockwave.material.opacity = 0;
@@ -559,17 +637,20 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
   const level = levels[levelIndex];
-  trolleyTime = 0;
+  levelTime = 0;
   trolleyDamage.restore(false);
+  Object.assign(cartDriver, {time: 0, speed: 1, waiting: 0, brake: 0});
   carDamage.forEach((damage) => damage.restore(false));
   trolley.root.visible = !!level.trolley;
-  if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+  if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(cartDriver.time, reducedMotion.matches, levels[levelIndex].trolley!);
   start.set(level.start[0], 0, level.start[1]);
   target.set(level.target[0], 0, level.target[1]);
   parkingBay.position.copy(target);
-  parkedVehicles.forEach(({ root, lot }) => {
+  parkedVehicles.forEach(({ root, lot, driver }) => {
+    Object.assign(driver, { time: 0, speed: 1, waiting: 0, brake: 0 });
     root.visible = lot === levelIndex;
   });
+  updateTraffic(0);
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
   const completedLastLot = levelIndex === levels.length - 1;
@@ -617,24 +698,30 @@ function finishFlight() {
   position.copy(flight.to);
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
-  const impactTime = flight.trolleyTime + flight.duration + flight.anticipation;
-  const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + flight.anticipation, levels[levelIndex].trolley!);
+  const impactTime = flight.levelTime + flight.duration + flight.anticipation;
+  levelTime = impactTime;
+  updateTraffic(impactTime);
+  const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, cartDriver.time, levels[levelIndex].trolley!);
   flight = null;
   pivot.rotation.set(0, 0, 0);
   let crushed = false;
   const touchedCars: number[] = [];
   let hitCone = false;
   parkedCars.forEach((other, index) => {
-    if (other.visible && vehicleLandingHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z) > 0) {
+    if (other.visible && orientedVehicleHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z, other.rotation.y) > 0) {
       touchedCars.push(index);
-      if (!carDamage[index].damaged) hits++;
+      if (!carDamage[index].damaged) {
+        hits++;
+        if (parkedVehicles[index].route && !replay)
+          easterEggs.discover("traffic-jam", "Traffic jam · You made it permanent.");
+      }
       carDamage[index].crush(reducedMotion.matches);
       crushed = true;
     }
   });
   if (crushed) message.textContent = "Roof lowered. Resale value also lowered.";
   if (trolleyHit) {
-    trolley.update(impactTime, reducedMotion.matches, levels[levelIndex].trolley!);
+    trolley.update(cartDriver.time, reducedMotion.matches, levels[levelIndex].trolley!);
     trolleyDamage.crush(reducedMotion.matches);
     hits++;
     message.textContent = "Unexpected item: one trolley pancake.";
@@ -652,6 +739,7 @@ function finishFlight() {
       cone.mesh.scale.set(1.3, 0.12, 1.3);
       message.textContent = "That cone had a family.";
     }
+  updateTraffic(impactTime);
   easterEggs.land(position.x, position.z, touchedCars, hitCone, !!replay);
 
   pivot.position.copy(position).y += 0.5;
@@ -667,7 +755,6 @@ function finishFlight() {
     reducedMotion.matches ? 0.25 : 0.35 + landingStrength * 0.5);
   // Require the complete upright car footprint to fit inside the parking bay.
   if (
-    position.y === 0 &&
     fitsParkingBay(position.x, position.z, target.x, target.z)
   ) {
     won = true;
@@ -697,7 +784,7 @@ function finishFlight() {
       : score.trolleys ? "Off your trolley. Into your spot."
       : score.cones ? "Cone-gratulations. You made an impression."
       : score.hits ? "A few claims to fame."
-      : "No claims. All bragging rights.";
+      : levels[levelIndex].parkedReply;
     message.textContent =
       levelIndex === levels.length - 1
         ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
@@ -937,9 +1024,13 @@ function endReplay() {
   reset("replay");
   easterEggs.restore(current.completed.eggs);
   moves = current.moves;
-  trolleyTime = current.completed.trolleyTime;
-  if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+  levelTime = current.completed.levelTime;
+  if (levels[levelIndex].trolley) trolley.update(cartDriver.time, reducedMotion.matches, levels[levelIndex].trolley!);
   carDamage.forEach((damage, index) => damage.restore(current.completed.carDamage[index]));
+  parkedCars.forEach((root, index) => root.position.copy(current.completed.carPositions[index]));
+  parkedVehicles.forEach(({ driver }, index) => Object.assign(driver, current.completed.drivers[index]));
+  Object.assign(cartDriver, current.completed.drivers[parkedVehicles.length]);
+  updateTraffic(levelTime);
   trolleyDamage.restore(current.completed.trolleyDamage);
   trolley.root.position.copy(current.completed.trolleyPosition);
   trolley.root.rotation.copy(current.completed.trolleyRotation);
@@ -969,7 +1060,7 @@ function beginReplay() {
   if (!won || replay || !moves.length) return;
   const current: ReplaySession = {
     moves: moves.slice(), index: 0, endHold: 0,
-    completed: { eggs: easterEggs.snapshot(), carDamage: carDamage.map((damage) => damage.damaged), trolleyDamage: trolleyDamage.damaged, trolleyPosition: trolley.root.position.clone(), trolleyRotation: trolley.root.rotation.clone(), trolleyTime, position: position.clone(), flips, hits, message: message.textContent ?? "",
+    completed: { drivers: trafficSnapshot(), carPositions: parkedCars.map(root => root.position.clone()), eggs: easterEggs.snapshot(), carDamage: carDamage.map((damage) => damage.damaged), trolleyDamage: trolleyDamage.damaged, trolleyPosition: trolley.root.position.clone(), trolleyRotation: trolley.root.rotation.clone(), levelTime, position: position.clone(), flips, hits, message: message.textContent ?? "",
       cones: cones.map((cone) => ({ position: cone.mesh.position.clone(), rotation: cone.mesh.rotation.clone(), hit: cone.hit })) },
   };
   levelEvent("replay_started");
@@ -1013,22 +1104,23 @@ resize();
 reset("initial");
 let last = performance.now();
 renderer.setAnimationLoop((now: number) => {
-  const dt = Math.min((now - last) / 1000, 0.04);
+  const dt = document.hidden ? 0 : Math.max(0, Math.min((now - last) / 1000, 0.04));
   last = now;
   if (!won) roundTime += dt;
   if (attemptStarted && !won && !replay && !document.hidden) attemptSeconds += dt;
+  if (!won) {
+    levelTime += dt;
+    updateTraffic(levelTime, dt);
+  }
   updateKeyboardAim(dt);
   if (aim.visible && !flight && !won) updateAimFeedback();
-  if (trolley.root.visible && !won && !trolleyDamage.damaged) {
-    trolleyTime += dt;
-    if (levels[levelIndex].trolley) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
-  }
   if (replay && !flight) {
     if (replay.index < replay.moves.length && roundTime >= replay.moves[replay.index].time) {
       const move = replay.moves[replay.index++];
       landing.set(move.x, 0, move.z);
-      trolleyTime = move.trolleyTime;
-      if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(trolleyTime, reducedMotion.matches, levels[levelIndex].trolley!);
+      levelTime = move.levelTime;
+      updateTraffic(levelTime);
+      if (levels[levelIndex].trolley && !trolleyDamage.damaged) trolley.update(cartDriver.time, reducedMotion.matches, levels[levelIndex].trolley!);
       launch(move);
     } else if (replay.index === replay.moves.length && (replay.endHold += dt) >= 2) {
       endReplay();
@@ -1108,7 +1200,7 @@ renderer.setAnimationLoop((now: number) => {
   }
   brakeLight.emissiveIntensity = !flight && touchdown < 1 ? 0.55 + 0.65 * (1 - touchdown) : 0.35;
   contactShadow.update(pivot, obstacleHeight(pivot.position.x, pivot.position.z));
-  const aimedFit = aim.visible && !flight && obstacleHeight(landing.x, landing.z) === 0 &&
+  const aimedFit = aim.visible && !flight && aimSymbols[0].visible &&
     fitsParkingBay(landing.x, landing.z, target.x, target.z);
   parkingFeedback.update(dt, aimedFit, won, reducedMotion.matches);
   exhaust.update(dt, !reducedMotion.matches);

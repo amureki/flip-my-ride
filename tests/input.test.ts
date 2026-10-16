@@ -1,10 +1,12 @@
+import { fitsParkingBay } from "../src/parking-feedback.ts";
+import { advanceTraffic, trafficPosition, orientedVehicleHeight } from "../src/traffic.ts";
 import fs from "node:fs";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import ts from "typescript";
 import * as THREE from "three";
-import { vehicleLandingHeight } from "../src/vehicles.ts";
+import { vehicleLandingHeight, vehicleShapes } from "../src/vehicles.ts";
 
 // Run the real input handlers without creating a WebGL renderer.
 const source = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
@@ -13,17 +15,18 @@ function inputFixture() {
   const handlers = {};
   const keys = {};
   const padHandlers = {};
-  const context = vm.createContext({ THREE, vehicleLandingHeight, handlers, padHandlers, keys, HTMLInputElement: class {}, Element: class {} });
+  const context = vm.createContext({ fitsParkingBay, advanceTraffic, trafficPosition, orientedVehicleHeight, THREE, vehicleLandingHeight, vehicleShapes, handlers, padHandlers, keys, HTMLInputElement: class {}, Element: class {} });
   const fixture = `
   const position = new THREE.Vector3();
   const landing = position.clone();
   const aim = {visible: false, position: new THREE.Vector3()};
-  const aimLine = {visible: false, geometry: new THREE.BufferGeometry()};
+  const aimLine = {visible: false, geometry: new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])};
   const message = {textContent: ''};
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};
   const parkedCars = [], carDamage = [], cones = [];
   const parkedVehicles = [];
+  const cartDriver = {time:0,speed:1,waiting:0,brake:0};
   const trolleyDamage = {damaged: false}, levels = [{}], levelIndex = 0;
   const aimSymbols = Array.from({length: 2}, () => ({visible: false, material: {color: new THREE.Color()}}));
   let won = false, flight = null, flips = 0, touchdown = 1, replay = null;
@@ -33,10 +36,13 @@ function inputFixture() {
   function trackEvent() {}
   function dismissRotationHint() {}
   function levelEvent() {}
-  const trolleyTime = 0;
+  let levelTime = 0;
   const flipsLabel = {}, reducedMotion = {matches: false};
   const suspension = {position: new THREE.Vector3()};
-  const shockwave = {material: {}}, pivot = {scale: new THREE.Vector3()}, stunt = {};
+  const shockwave = {material: {}, position: new THREE.Vector3()}, pivot = {scale: new THREE.Vector3(), position: new THREE.Vector3(), rotation: new THREE.Euler()}, stunt = {};
+  let hits = 0, landingStrength = 0;
+  const target = new THREE.Vector3(), jets = {}, sideJets = {};
+  const easterEggs = {land() {}, discover() {}};
   function burst() {}
   let pointer = null, keyboardAiming = false;
   const aimKeys = new Set();
@@ -51,7 +57,8 @@ function inputFixture() {
   `;
   const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset('));
   const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('document.querySelector("#reset")'));
-  vm.runInContext(ts.transpile(fixture + source.slice(source.indexOf("function obstacleHeight("), source.indexOf("const carDamage =")) + functions + events), context);
+  vm.runInContext(ts.transpile(fixture + source.slice(source.indexOf("function simulateTraffic("), source.indexOf("const carDamage =")) + functions + events), context);
+  vm.runInContext(ts.transpile(source.slice(source.indexOf('function finishFlight()'), source.indexOf('for (const surface of [stage, thumbPad])'))), context);
   return {handlers, padHandlers, keys, context};
 }
 
@@ -144,11 +151,11 @@ test("replay preserves flight timing when reduced-motion preferences change", ()
   const {context} = inputFixture();
   vm.runInContext('showAim(new THREE.Vector3(2, 0, 0))', context);
   assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); carDamage.push({damaged: false}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); updateAimFeedback()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); carDamage.push({damaged: false}); parkedVehicles.push({root: parkedCars[0], model: "compact", driver: {time:0,speed:1,waiting:0,brake:0}}); updateAimFeedback()', context);
   assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
   assert.match(vm.runInContext('message.textContent', context), /Collision risk/);
   vm.runInContext('carDamage[0].damaged = true; updateAimFeedback()', context);
-  assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), false);
   vm.runInContext('showAim(new THREE.Vector3(9,0,0))', context);
   assert.equal(vm.runInContext('aimSymbols[0].visible && landing.x === 7.7', context), true);
 });
@@ -188,7 +195,7 @@ test("pad cancellation, retry and resize cannot launch a pending gesture", () =>
 
 test("landings on cars keep roof clearance and subsequent jumps start at roof height", () => {
   const {context} = inputFixture();
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0)}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); landing.set(2,0,0); launch()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); landing.set(2,0,0); launch()', context);
   assert.equal(vm.runInContext('flight.to.y', context), 1.05);
   vm.runInContext('position.copy(flight.to); flight = null; landing.set(5,0,0); launch()', context);
   assert.equal(vm.runInContext('flight.from.y', context), 1.05);
@@ -348,4 +355,62 @@ test("pad direction and preview agree at different origins and drag strengths", 
       }
     }
   }
+});
+
+
+test("landing on an occupied bay files a claim and completes without trapping the player", () => {
+  for (const reduced of [false, true]) {
+    const { context } = inputFixture();
+    vm.runInContext(`
+      reducedMotion.matches = ${reduced}; replay = {};
+      const root = new THREE.Group(); root.position.set(5.7, 0, -4.8);
+      const route = {model: 'compact', from: [5.7,-4.8], to: [5.7,0.6], period: 11, pause: 1.8};
+      const signals = {reverseLights: {}};
+      parkedCars.push(root); parkedVehicles.push({root, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
+      carDamage.push({damaged: false, roofDrop: 0, bodyDrop: 0, crush() {this.damaged = true}});
+      target.set(5.7,0,-4.8); position.set(3,0,-0.5);
+      showAim(target.clone().sub(position));
+      const warned = aimSymbols[1].visible;
+      launch(); const predictedHeight = flight.to.y;
+      finishFlight(); const impact = root.position.clone(); updateTraffic(7);
+    `, context);
+    assert.ok(vm.runInContext("!warned && predictedHeight > 0 && won && hits === 1", context));
+    assert.ok(vm.runInContext("carDamage[0].damaged && root.position.equals(impact)", context));
+  }
+});
+
+test("traffic still resolves at arrival time without revealing a forecast", () => {
+  const { context } = inputFixture();
+  vm.runInContext(`
+    replay = {}; levelTime = 4;
+    const root = new THREE.Group();
+    const route = {model: 'compact', from: [5.7,-4.8], to: [5.7,0.6], period: 11, pause: 1.8};
+    const signals = {reverseLights: {}};
+    parkedCars.push(root); parkedVehicles.push({root, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
+    carDamage.push({damaged: false, roofDrop: 0, bodyDrop: 0, crush() {this.damaged = true}});
+    parkedVehicles[0].driver.time = levelTime; updateTraffic(levelTime); target.set(5.7,0,-4.8); position.set(3,0,-0.5);
+    showAim(target.clone().sub(position));
+    const clear = aimSymbols[0].visible;
+    launch(); finishFlight();
+  `, context);
+  assert.ok(vm.runInContext("clear && won && hits === 0 && position.y === 0", context));
+});
+
+
+test("aim warns about stationary cars and cones but never forecasts traffic or the cart", () => {
+  const { context } = inputFixture();
+  vm.runInContext(`
+    const root = new THREE.Group(); root.position.set(2,0,0);
+    parkedVehicles.push({root, model: 'compact', route: {model: 'compact', from: [2,0], to: [2,4], period: 10, pause: 2}});
+    carDamage.push({damaged: false});
+    levels[0].trolley = {from: [2,0], to: [2,0]};
+    showAim(new THREE.Vector3(2,0,0));
+  `, context);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), false);
+  vm.runInContext('parkedVehicles[0].route = undefined; updateAimFeedback()', context);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
+  vm.runInContext('carDamage[0].damaged = true; updateAimFeedback()', context);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), false);
+  vm.runInContext('cones.push({mesh: {visible: true, position: new THREE.Vector3(2,0,0)}, hit: false}); updateAimFeedback()', context);
+  assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
 });

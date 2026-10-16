@@ -64,6 +64,11 @@ export function makeEasterEggs(sign: THREE.Group, car: THREE.Group, cone: THREE.
     hat.visible = state.hat;
   }
   return {
+    discover,
+    waitForPlayer(index: number) {
+      if (!exchange) exchange = { other: parkedCars[index], elapsed: 0, turns: 2 };
+      discover("right-of-way", "Beep! · A driver is waiting for you to move.");
+    },
     snapshot: (): EggState => ({ ...state, contacts: [...state.contacts] }),
     restore,
     reset(newRun: boolean, reply: string) {
@@ -95,6 +100,8 @@ export function makeEasterEggs(sign: THREE.Group, car: THREE.Group, cone: THREE.
       }
       for (const index of cars) {
         state.contacts[index] = (state.contacts[index] ?? 0) + 1;
+        if (!replay && state.contacts[index] === 3)
+          discover("this-is-fine", "This is fine · The warranty has left the chat.");
         if (!replay && state.contacts[index] <= 2) {
           const duet = state.contacts[index] === 2;
           exchange = { other: parkedCars[index], elapsed: 0, turns: duet ? 4 : 2 };

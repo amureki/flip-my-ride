@@ -716,3 +716,14 @@ button:disabled {
 @media (max-height: 500px) {
   #discovery { top: 80px; }
 }
+
+@media (pointer: fine) and (max-height: 500px) {
+  #stage {
+    top: 80px;
+    bottom: 110px;
+  }
+  #app:has(#result:not([hidden])) #stage,
+  #app:has(#error:not([hidden])) #stage {
+    inset: 0;
+  }
+}

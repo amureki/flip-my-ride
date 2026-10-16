@@ -36,6 +36,9 @@ test("discoveries deduplicate, queue, reset and restore without changing gamepla
     eggs.update(3.6, false);
     assert.match(banner.textContent, /Car-ma/);
     assert.ok(bubbles.every((bubble) => !bubble.visible));
+    eggs.land(0, 0, [0], false, false);
+    eggs.update(3.6, false);
+    assert.match(banner.textContent, /This is fine/);
     const saved = eggs.snapshot();
     eggs.reset(false, "Please don’t.");
     assert.equal(sign.rotation.x, 0);
@@ -57,6 +60,16 @@ test("discoveries deduplicate, queue, reset and restore without changing gamepla
     eggs.land(4.2, -4.5, [], false, false);
     eggs.update(0.1, false);
     assert.equal(banner.hidden, false);
+    eggs.reset(true, "Please don’t.");
+    eggs.waitForPlayer(0);
+    eggs.update(0.1, false);
+    assert.equal(bubbles[0].visible, true);
+    assert.match(banner.textContent, /waiting for you/);
+    assert.equal(eggs.snapshot().contacts.length, 0);
+    eggs.update(0.85, false);
+    assert.equal(bubbles[1].visible, true);
+    eggs.update(1, false);
+    assert.ok(bubbles.every(bubble => !bubble.visible));
   } finally { globalThis.document = previous; }
 });
 

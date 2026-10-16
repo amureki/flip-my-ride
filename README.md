@@ -1,23 +1,45 @@
 # Flip My Ride
 
-A small browser game inspired by the Roadster stunt presentation. The car only moves by flipping. Land completely inside the green parking bay to win.
+A small browser game inspired by the Roadster stunt presentation. The car only moves by flipping. Land completely inside the green parking bay to win, even on top of another car.
 
 ## Run locally
 
-Requires Node.js 22.12+ (or a compatible newer release).
+Requires Node.js 22.12 or a compatible newer release.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-On mobile, drag on the compact thumb pad at the bottom center (beside the lot in landscape) to aim, then release to flip. Small drags provide fine aiming; drag farther, including beyond the pad, for more power. The landing marker stays visible above your hand. Release commits that preview, ignoring finger drift during lift-off. Slide back to where you started the touch to cancel. On desktop, click a landing spot to flip there. Hold the mouse or trackpad button and move to adjust the landing ring before releasing. Targets beyond the nine-unit range are clamped to the nearest reachable point. Press Escape to cancel. On a keyboard, hold arrows or WASD to move the landing marker (combine direction keys for diagonals), then press Space to jump. Press R or Retry to reset, including during a jump.
+## Controls
+
+On mobile, drag on the thumb pad to aim, then release to flip. The pad sits at the bottom center in portrait and beside the lot in landscape. Small drags provide fine aiming; drag farther, including beyond the pad, for more power. The landing marker stays visible above your hand. Releasing uses the last visible preview, even if your finger moves as you lift it. Slide back to where you started the touch to cancel.
+
+On desktop, click a landing spot to flip there. Hold the mouse or trackpad button and move to adjust the landing ring before releasing. Targets beyond the nine-unit range are clamped to the nearest reachable point. Press Escape to cancel.
+
+On a keyboard, hold arrows or WASD to move the landing marker, then press Space to jump. Combine direction keys to aim diagonally. Press R or Retry to reset, including during a jump.
+
+## Landing
 
 Land on cars, trolleys, or cones to flatten them and continue from the landing point. Each object adds one insurance claim the first time it is crushed. Wrecks remain until Retry or the next lot; landing on a wreck adds no further claim. Aiming outside the lot stops the marker at the nearest valid point inside the curb. The car lands there without a reset or an extra claim. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
 
 ## Lots
 
-Play four lots in order: One Spot Over, Full Lot, Unexpected Item, and Last Space. Start with a short sideways flip, navigate parked cars, then time a landing around a runaway shopping trolley. Last Space combines a three-jump route through empty gaps with a trolley crossing the final approach. After parking, Next lot advances and Retry restarts the current lot. After Last Space, Play again returns to the first lot. Completed shares include the lot name.
+Play seven lots in order. After parking, Next lot advances and Retry restarts the current lot. After the finale, Play again starts a new run. Completed shares include the lot name.
+
+| Lot | Challenge |
+| --- | --- |
+| One Spot Over | Learn the short sideways flip. |
+| Full Lot | Find clear intermediate landings among parked cars. |
+| Unexpected Item | Time a landing around a runaway trolley. |
+| Reverse Psychology | Watch a car back out across your approach. |
+| Space Invaders | Catch a fixed bay while its indecisive occupant is away. |
+| After You. No, You. | Time landings around two drivers, including a sideways car in the aisle. |
+| Final Boss: Parking | Park among three moving cars and a trolley in a crowded lot. |
+
+Bays stay fixed. Other drivers reverse out, pause, and pull back into spaces on repeatable cycles. White reverse lights warn before movement. The landing ring warns about intact stationary cars and cones. Read the moving cars and trolley yourself; aiming does not reveal their future positions. Drivers and the trolley yield to occupied ground, including the player, other cars, and wrecks. Drivers exchange one beep when waiting for the player and resume smoothly when the way is clear. A long wait reveals “You can’t park there, mate.” Crashes with cars and the trolley occur on landing. Crushed cars stop at the impact point and count once. Landing fully inside the bay still wins if you crush its occupant. This adds a claim but does not block progress. There are no buttons, ice tiles, timers, or limited lives.
+
+Every lot has a sign with a hidden reply. Hit a cone to wear it as a hat, or land on a car to make it reply with a "beep!" bubble. A third landing on the same car reveals "This is fine"; crushing a moving car discovers "Traffic jam." Clean parking earns a lot-specific receipt pun. Damage remains optional. The harder challenge is parking cleanly with fewer flips.
 
 ## Static deployment
 
@@ -62,49 +84,50 @@ Events use [Umami's custom event API](https://docs.umami.is/docs/tracker-functio
 
 Level events include the level number/name, attempt number, flips, claims, and visible gameplay seconds since the attempt's first flip. Duration excludes hidden-tab time, waiting before the first flip, and replay playback. Game totals use saved scores, not discarded retries. Playback does not emit starts or completions. Share results cannot confirm that a post was published or delivered; manual-copy fallback cannot confirm copying.
 
-Compare level starts and completions by level in Umami, then inspect retries, duration, and claims for difficult sections. Use sessions/funnels for player progression: raw counts include repeat attempts. Compare pageviews with game starts for visitors who never play, and completions with share clicks for sharing interest. Exit events can be lost when browsers close; do not treat missing exit events as continued play. These signals show behavior, not whether players enjoyed a level.
+Compare level starts and completions by level in Umami, then inspect retries, duration, and claims for difficult sections. Use sessions and funnels to track player progression. Raw counts include repeat attempts. Compare pageviews with game starts for visitors who never play, and completions with share clicks for sharing interest. Exit events can be lost when browsers close; do not treat missing exit events as continued play. These signals show behavior, not whether players enjoyed a level.
 
 ### GitHub Pages
 
-Push the repository to GitHub with a `main` branch. Select **Settings → Pages → Source → GitHub Actions**. The included `.github/workflows/deploy.yml` builds and deploys on pushes to `main`, or manually. Change the workflow branch if needed.
+Push the repository to GitHub with a `main` branch. Open Settings, then Pages, and set Source to GitHub Actions. The included `.github/workflows/deploy.yml` builds and deploys on pushes to `main`, or manually. Change the workflow branch if needed.
 
 ### Cloudflare Pages
 
-Connect the repository. Use build command `npm run build`, output directory `dist`, and Node.js 22.12 or newer. No environment secrets or Functions are required.
+Connect the repository. Use build command `npm run build`, output directory `dist`, and Node.js 22.12 or newer. The deployment needs no environment secrets or Cloudflare Functions.
 
 ### Link previews and icons
 
 The public URL is https://flip.amureki.me/. `.env.production` sets `SITE_URL` for production builds. `public/CNAME` declares the GitHub Pages custom domain; configure the matching domain in the hosting settings and point its DNS record at the host. Override `SITE_URL` only when deploying to a different URL.
 
-The build puts canonical and absolute Open Graph/X image URLs in the HTML and generates `sitemap.xml`. Without `SITE_URL`, local builds still work, but print a warning and omit these URL-dependent fields. Metadata does not depend on JavaScript execution.
+The build adds a canonical URL and absolute Open Graph and X image URLs to the HTML and generates `sitemap.xml`. Without `SITE_URL`, local builds still work, but print a warning and omit these URL-dependent fields. Metadata does not depend on JavaScript execution.
 
-`public/og-image.png` is the 1200 × 630 social card. Its source is `assets/og-image.html`, which renders the actual game car with Three.js and uses the game’s palette and Arial typography. To regenerate it, run `npm run dev`, open `/assets/og-image.html` in Chrome at a 1200 × 630 viewport with device scale factor 1, wait for `html[data-ready="true"]`, and capture the viewport as `public/og-image.png`. The source page is not included in the production build. The favicon, Apple touch icon, and 192/512-pixel home-screen icons share the flipping-car mark in `public/favicon.svg`. Keep icon PNG exports in sync when editing that SVG. Social image and favicon URLs include a version tag; increase it when replacing these assets. The web manifest supports home-screen launch; it does not provide offline play.
+`public/og-image.png` is the 1200 × 630 social card. Its source is `assets/og-image.html`, which renders the actual game car with Three.js and uses the game's palette and Arial typography. To regenerate it, run `npm run dev`, open `/assets/og-image.html` in Chrome at a 1200 × 630 viewport with device scale factor 1, wait for `html[data-ready="true"]`, and capture the viewport as `public/og-image.png`. The source page is not included in the production build. The favicon, Apple touch icon, and 192/512-pixel home-screen icons share the flipping-car mark in `public/favicon.svg`. Keep icon PNG exports in sync when editing that SVG. Social image and favicon URLs include a version tag; increase it when replacing these assets. The web manifest supports home-screen launch. It does not provide offline play.
 
 After deployment, check a shared link in your target messaging/social apps and confirm that `og-image.png` is publicly reachable. Social platforms cache previews, so refresh their caches after changes. All shares use the same public game preview; completed scores are included in the post text.
 
 ## Implementation
 
-Three.js draws a procedural low-poly scene. TypeScript manages deterministic jump arcs, pointer capture, collision checks at landing, and game state. Vite bundles the app. The interface uses system fonts. Mouse, touch, and pen share Pointer Events. The camera fits the lot to its container with ResizeObserver. Requires WebGL and a modern browser. Clipboard result sharing needs HTTPS or localhost; failure leaves a readable message.
+Three.js draws a procedural low-poly scene. TypeScript manages deterministic jump arcs, pointer capture, collision checks at landing, and game state. Vite bundles the app. The interface uses system fonts. Mouse, touch, and pen share Pointer Events. The camera fits the lot to its container with ResizeObserver. The game requires WebGL and a modern browser. Clipboard result sharing needs HTTPS or localhost; failure leaves a readable message.
 
-The game uses simplified landing checks rather than rigid-body physics. It is an unofficial parody, not affiliated with Tesla.
+The game checks collisions at landing. It does not simulate rigid-body physics. It is an unofficial parody, not affiliated with Tesla.
 
 Strong launches perform two rolls. A short launch crouch, visible air jets, landing bounce, and dust ring exaggerate each jump. The flip counter counts rotations; reduced-motion mode keeps the same controls and landing rules with a low arc and no rolls, jets, or landing bounce. The player car uses an original procedural wedge model with a dark canopy, slim light bars, rear wing, and four underside nozzles.
 
 ## Sharing
 
-X, WhatsApp, Telegram, and the native share action are visible at the top from the first screen, and again in the completed result. Social links open a composer with the game URL and, after a win, a short score boast. No account or API key is needed. Users choose the recipient and send the post themselves.
+X, WhatsApp, Telegram, and the native share action are visible at the top from the first screen, and again in the completed result. Social links open a composer with the game URL and, after a win, a short score message. No account or API key is needed. Users choose the recipient and send the post themselves.
 
 The native action uses the device share sheet when available; otherwise it copies the game link, with manual selection if clipboard access fails. Cancelling native sharing does not copy anything. There are no score-bearing challenge URLs or shared replay links. Deploy to public HTTPS before sharing; localhost URLs only work on the same device.
 
-Run local share URL and text checks with npm test.
+Run local share URL and text checks with `npm test`.
 
 ## Replays
 
 After each completed lot, Watch replay plays every jump since the latest Retry, including failed landings and crashes. Replays preserve the original jump timing, including pauses, with a two-second hold after the final landing. Watch replay keeps the normal gameplay size and camera, including when the window is resized. Replay uses the current reduced-motion preference.
 
-
 Back to score, Escape, or hiding the tab stops playback and restores the completed score. Players can use their own screen recorder while watching. There is no built-in video export.
 
-In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle. Replay preserves trolley timing at each launch.
+In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cycle. Landing on it files one claim, flattens it, and stops it at the impact point. The player stays at the landing point. Retry restarts the cycle. Replay preserves each driver’s and the trolley’s paused clock and acceleration state, and restores stopped cars at their impact positions. The shared level clock continues after a trolley is crushed and pauses while the page is hidden.
+
+## Vehicle models
 
 Parked vehicles are original, unbadged compact, fastback, SUV, and semi tractor designs. The tractor appears in Unexpected Item. Mesh dimensions also define collision footprints and body/roof landing surfaces; these are stylized game units, not manufacturer specifications. No promotional photographs or manufacturer model assets are included. This is not legal clearance.

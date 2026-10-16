@@ -16,13 +16,16 @@ function replayFixture() {
   const context = vm.createContext({ THREE, trolley, trolleyDamage });
   vm.runInContext(`
     let replay = { index: 0, endHold: 0, moves: [
-      { time: 3, x: 2, z: 1, trolleyTime: 3 },
-      { time: 6, x: 4, z: 2, trolleyTime: 6 }
+      { time: 3, x: 2, z: 1, levelTime: 3 },
+      { time: 6, x: 4, z: 2, levelTime: 6 }
     ] };
-    let flight = null, roundTime = 0, trolleyTime = 0, ended = false;
+    let flight = null, roundTime = 0, levelTime = 0, ended = false;
     const landing = new THREE.Vector3();
     const reducedMotion = { matches: false };
     const levels = [{ trolley: { from: [-4, 0], to: [4, 0] } }], levelIndex = 0;
+    const cartDriver = {time:0,speed:1,waiting:0,brake:0};
+    function trafficSnapshot() {return [...parkedVehicles.map(({driver})=>({...driver})), {...cartDriver}] }
+    function updateTraffic() {}
     function launch(move) { flight = move; }
     function endReplay() { ended = true; replay = null; }
     function tick(dt) { ${ts.transpile(playback)} }
@@ -77,9 +80,14 @@ test("exiting replay restores the completed score, damage, controls and replay h
     replayPanel, document: { querySelector: () => app } });
   const functions = source.slice(source.indexOf("function endReplay()"), source.indexOf('watchReplay.addEventListener("click"'));
   vm.runInContext(ts.transpile(`
-    let replay = null, won = true, moves = [{time: 3, x: 2, z: 1}], flips = 4, hits = 3, trolleyTime = 7;
+    let replay = null, won = true, moves = [{time: 3, x: 2, z: 1}], flips = 4, hits = 3, levelTime = 7;
     const levels = [{trolley: {from: [-4, 0], to: [4, 0]}}], levelIndex = 0;
     const reducedMotion = {matches: false}, position = new THREE.Vector3(3, 0, 2);
+    const parkedCars = [new THREE.Group()];
+    const parkedVehicles = [{driver: {time: 3, speed: 0, waiting: 6, brake: 0}}];
+    const cartDriver = {time:0,speed:1,waiting:0,brake:0};
+    function trafficSnapshot() {return [...parkedVehicles.map(({driver})=>({...driver})), {...cartDriver}] }
+    function updateTraffic() {}
     const pivot = new THREE.Group(), cones = [{mesh: new THREE.Group(), hit: true}];
     const flipsLabel = {}, message = {textContent: 'Parked.'};
     const result = new HTMLElement(), watchReplay = new HTMLElement(), stopReplay = new HTMLElement();
@@ -87,13 +95,16 @@ test("exiting replay restores the completed score, damage, controls and replay h
     function updateShareLinks() {}
     function levelEvent() {}
     function reset() {
-      moves = []; won = false; flips = hits = trolleyTime = 0;
+      Object.assign(parkedVehicles[0].driver, {time: 0, speed: 1, waiting: 0, brake: 0});
+      Object.assign(cartDriver, {time:0,speed:1,waiting:0,brake:0});
+      moves = []; won = false; flips = hits = levelTime = 0;
       position.set(0, 0, 0); message.textContent = ''; result.hidden = true;
       trolleyDamage.restore(false); carDamage[0].restore(false); cones[0].hit = false;
     }
     ${functions}
-    trolleyDamage.crush(true); carDamage[0].crush(true);
+    trolleyDamage.crush(true); carDamage[0].crush(true); parkedCars[0].position.set(4, 0, 1);
     trolley.root.position.set(1, 0, 2); trolley.root.rotation.z = 0.02;
+    Object.assign(cartDriver, {time:4,speed:0,waiting:3,brake:0});
     beginReplay();
   `), context);
   assert.ok(app.children.filter(child => child !== replayPanel).every(child => child.inert));
@@ -101,6 +112,9 @@ test("exiting replay restores the completed score, damage, controls and replay h
   vm.runInContext("trolley.root.position.set(8, 0, 8); endReplay()", context);
   assert.equal(vm.runInContext("won && flips === 4 && hits === 3 && moves.length === 1 && position.x === 3 && message.textContent === 'Parked.'", context), true);
   assert.equal(vm.runInContext("easterEggs.restored.sign && easterEggs.restored.hat && easterEggs.restored.contacts[0] === 2", context), true);
+  assert.equal(vm.runInContext("parkedCars[0].position.x === 4 && parkedCars[0].position.z === 1", context), true);
+  assert.equal(vm.runInContext("parkedVehicles[0].driver.time === 3 && parkedVehicles[0].driver.waiting === 6", context), true);
+  assert.equal(vm.runInContext("cartDriver.time === 4 && cartDriver.waiting === 3 && cartDriver.speed === 0", context), true);
   assert.equal(trolleyDamage.damaged, true);
   assert.equal(carDamage[0].damaged, true);
   assert.deepEqual(trolley.root.position.toArray(), [1, 0, 2]);
@@ -110,4 +124,22 @@ test("exiting replay restores the completed score, damage, controls and replay h
   assert.equal(replayPanel.hidden, true);
   vm.runInContext("beginReplay()", context);
   assert.equal(vm.runInContext("replay.moves.length", context), 1);
+});
+
+
+test("a crushed trolley does not freeze traffic", () => {
+  const start = source.indexOf("  if (!won) {\n    levelTime += dt;");
+  const end = source.indexOf("  updateKeyboardAim(dt);", start);
+  assert.ok(start > 0 && end > start);
+  const context = vm.createContext({});
+  vm.runInContext(`
+    let levelTime = 2, won = false, trafficTime = 0;
+    const dt = 0.04;
+    const trolley = {root: {visible: true}, update() {throw new Error('Crushed cart moved')}};
+    const trolleyDamage = {damaged: true};
+    function updateTraffic(time) {trafficTime = time;}
+    ${ts.transpile(source.slice(start, end))}
+  `, context);
+  assert.equal(vm.runInContext("levelTime", context), 2.04);
+  assert.equal(vm.runInContext("trafficTime", context), 2.04);
 });
