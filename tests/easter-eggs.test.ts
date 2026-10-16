@@ -61,9 +61,11 @@ test("discoveries deduplicate, queue, reset and restore without changing gamepla
 });
 
 
-test("each sign has a clear landing away from the goal and within one flip of the start", () => {
+test("each curbside sign is reachable from a clear in-bounds landing away from the goal", () => {
   for (const level of levels) {
-    const [x, z] = level.sign;
+    assert.ok(level.sign[0] <= -9 && level.sign[0] >= -9.4, level.name);
+    const [x, z] = [-7.6, level.sign[1]];
+    assert.ok(Math.abs(x - level.sign[0]) < 2.1, level.name);
     assert.ok(Math.abs(x) <= 7.7 && Math.abs(z) <= 5.7, level.name);
     assert.ok(Math.hypot(x - level.start[0], z - level.start[1]) <= 9, level.name);
     assert.ok(Math.hypot(x - level.target[0], z - level.target[1]) > 4, level.name);

@@ -65,7 +65,7 @@
         id="stage"
         tabindex="0"
         role="application"
-        aria-label="Parking game. Drag in a direction and release to flip. Hold arrows or WASD to move the landing marker, combine direction keys for diagonals, and press Space to flip. R to retry."
+        aria-label="Parking game. Click a landing spot to flip. Hold and move to adjust; release to flip. Escape cancels. Hold arrows or WASD to move the landing marker, combine direction keys for diagonals, and press Space to flip. R to retry."
       >
         <div id="result" hidden>
           <div class="result-score">
@@ -292,10 +292,10 @@
       </div>
       <div class="instructions">
         <div id="message" role="status" aria-live="polite" aria-atomic="true">
-          Drag to aim. Release to flip. Land in green.
+          Choose your landing. Release to flip. Land in green.
         </div>
-        <p class="desktop-hint">Drag and release · Arrows/WASD move marker · Space flips <span>· R retries</span></p>
-        <p class="mobile-hint" id="thumb-hint">Drag on the pad to aim · Release to flip</p>
+        <p class="desktop-hint">Click a spot to flip · Hold to adjust · Esc cancels · Arrows/WASD aim · Space flips <span>· R retries</span></p>
+        <p class="mobile-hint" id="thumb-hint">Drag to aim · Release to flip · Slide back to cancel</p>
         <div id="thumb-pad" role="group" aria-label="Thumb pad" aria-describedby="thumb-hint">
           <span class="thumb-origin" aria-hidden="true"></span>
           <span class="thumb-knob" aria-hidden="true"></span>

@@ -198,7 +198,7 @@ p.rotation.x = -Math.PI / 2;
 p.position.set(0, 0.04, 0);
 parkingBay.add(p);
 const sign = new THREE.Group();
-sign.position.set(levels[0].sign[0], 0, levels[0].sign[1]);
+sign.position.set(levels[0].sign[0], -0.13, levels[0].sign[1]);
 sign.rotation.y = 0.2;
 const signCanvas = document.createElement("canvas");
 signCanvas.width = 768;
@@ -354,7 +354,6 @@ aim.add(markerBacking);
 const aimSymbols = [
   [[-0.24, 0], [-0.06, -0.18], [-0.06, -0.18], [0.26, 0.23]],
   [[0, 0.27], [0, -0.08], [0, -0.2], [0, -0.27]],
-  [[-0.22, -0.22], [0.22, 0.22], [-0.22, 0.22], [0.22, -0.22]],
 ].map((points) => {
   const symbol = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(
     points.map(([x, z]) => new THREE.Vector3(x, 0.075, -z)),
@@ -435,9 +434,10 @@ function worldAt(x: number, y: number) {
 function showAim(delta: THREE.Vector3) {
   delta.setY(0).clampLength(0, 9);
   landing.copy(position).setY(0).add(delta);
+  constrainLanding();
   if (Math.hypot(position.x - landing.x, position.z - landing.z) < 0.3) {
     clearAim();
-    message.textContent = keyboardAiming ? "Move the marker farther to flip." : "Drag farther to flip.";
+    message.textContent = keyboardAiming ? "Move the marker farther to flip." : pointerSurface === thumbPad ? "Drag farther to flip." : "Choose a spot farther from the car.";
     return;
   }
   aim.position.copy(landing);
@@ -450,34 +450,36 @@ function showAim(delta: THREE.Vector3) {
   aimLine.visible = true;
   updateAimFeedback();
 }
+function constrainLanding() {
+  landing.x = THREE.MathUtils.clamp(landing.x, -bounds.x + 0.8, bounds.x - 0.8);
+  landing.z = THREE.MathUtils.clamp(landing.z, -bounds.z + 1.3, bounds.z - 1.3);
+}
 function updateAimFeedback() {
-  const outside =
-    Math.abs(landing.x) > bounds.x - 0.8 ||
-    Math.abs(landing.z) > bounds.z - 1.3;
   const obstacle = obstacleHeight(landing.x, landing.z) > 0 ||
     cones.some((cone) => cone.mesh.visible && !cone.hit && Math.abs(landing.x - cone.mesh.position.x) < 1.05 && Math.abs(landing.z - cone.mesh.position.z) < 1.6) ||
     (!trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(landing.x, landing.z,
       trolleyTime + (reducedMotion.matches ? 0.8 : 1.27 + Math.hypot(position.x - landing.x, position.z - landing.z) * 0.075), levels[levelIndex].trolley!));
-  const state = outside ? 2 : obstacle ? 1 : 0;
-  const color = [0xfff5ce, 0xe9b657, 0xdc6839][state];
+  const state = obstacle ? 1 : 0;
+  const color = [0xfff5ce, 0xe9b657][state];
   (ring.material as THREE.MeshBasicMaterial).color.set(color);
   aimSymbols.forEach((symbol, index) => {
     symbol.visible = index === state;
     symbol.material.color.set(color);
   });
-  message.textContent = outside
-    ? "That is technically outside the parking lot."
-    : obstacle
+  message.textContent = obstacle
       ? "Collision risk. Landing here may add a claim."
       : keyboardAiming
       ? "Press Space to flip."
-      : "Release to commit to this engineering decision.";
+      : pointerSurface === thumbPad
+        ? "Release to flip. Slide back to your starting point to cancel."
+        : "Release to flip here. Esc cancels.";
 }
 function clearAim() {
   aim.visible = false;
   aimLine.visible = false;
 }
 function launch(replayMove?: ReplayMove) {
+  constrainLanding();
   aimKeys.clear();
   keyboardAiming = false;
   const distance = Math.hypot(position.x - landing.x, position.z - landing.z);
@@ -525,7 +527,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   if (reason === "retry" && attemptStarted) levelEvent("level_retried", { completed: won });
   if (reason !== "replay") attemptStarted = false;
   if (reason === "next") attempt = 0;
-  sign.position.set(levels[levelIndex].sign[0], 0, levels[levelIndex].sign[1]);
+  sign.position.set(levels[levelIndex].sign[0], -0.13, levels[levelIndex].sign[1]);
   signContext.fillStyle = "#f8f7f1";
   signContext.beginPath();
   signContext.roundRect(0, 0, 768, 640, 40);
@@ -613,55 +615,45 @@ function finishFlight() {
   if (!flight) return;
   landingStrength = THREE.MathUtils.clamp(flight.from.distanceTo(flight.to) / 9, 0, 1);
   position.copy(flight.to);
-  const oldPosition = flight.from;
   const clearedCar = flight.clearedCar;
   const previousHits = hits;
   const impactTime = flight.trolleyTime + flight.duration + flight.anticipation;
   const trolleyHit = !trolleyDamage.damaged && !!levels[levelIndex].trolley && hitsTrolley(position.x, position.z, flight.trolleyTime + flight.duration + flight.anticipation, levels[levelIndex].trolley!);
   flight = null;
   pivot.rotation.set(0, 0, 0);
-  if (
-    Math.abs(position.x) > bounds.x - 0.8 ||
-    Math.abs(position.z) > bounds.z - 1.3
-  ) {
-    position.copy(oldPosition);
-    hits++;
-    message.textContent =
-      "Out of bounds. Returned to your last questionable decision.";
-  } else {
-    let crushed = false;
-    const touchedCars: number[] = [];
-    let hitCone = false;
-    parkedCars.forEach((other, index) => {
-      if (other.visible && vehicleLandingHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z) > 0) {
-        touchedCars.push(index);
-        if (!carDamage[index].damaged) hits++;
-        carDamage[index].crush(reducedMotion.matches);
-        crushed = true;
-      }
-    });
-    if (crushed) message.textContent = "Roof lowered. Resale value also lowered.";
-    if (trolleyHit) {
-      trolley.update(impactTime, reducedMotion.matches, levels[levelIndex].trolley!);
-      trolleyDamage.crush(reducedMotion.matches);
-      hits++;
-      message.textContent = "Unexpected item: one trolley pancake.";
+  let crushed = false;
+  const touchedCars: number[] = [];
+  let hitCone = false;
+  parkedCars.forEach((other, index) => {
+    if (other.visible && vehicleLandingHeight(parkedVehicles[index].model, position.x - other.position.x, position.z - other.position.z) > 0) {
+      touchedCars.push(index);
+      if (!carDamage[index].damaged) hits++;
+      carDamage[index].crush(reducedMotion.matches);
+      crushed = true;
     }
-    for (const cone of cones)
-      if (
-        cone.mesh.visible &&
-        !cone.hit &&
-        Math.abs(position.x - cone.mesh.position.x) < 1.05 &&
-        Math.abs(position.z - cone.mesh.position.z) < 1.6
-      ) {
-        hitCone = true;
-        cone.hit = true;
-        hits++;
-        cone.mesh.scale.set(1.3, 0.12, 1.3);
-        message.textContent = "That cone had a family.";
-      }
-    easterEggs.land(position.x, position.z, touchedCars, hitCone, !!replay);
+  });
+  if (crushed) message.textContent = "Roof lowered. Resale value also lowered.";
+  if (trolleyHit) {
+    trolley.update(impactTime, reducedMotion.matches, levels[levelIndex].trolley!);
+    trolleyDamage.crush(reducedMotion.matches);
+    hits++;
+    message.textContent = "Unexpected item: one trolley pancake.";
   }
+  for (const cone of cones)
+    if (
+      cone.mesh.visible &&
+      !cone.hit &&
+      Math.abs(position.x - cone.mesh.position.x) < 1.05 &&
+      Math.abs(position.z - cone.mesh.position.z) < 1.6
+    ) {
+      hitCone = true;
+      cone.hit = true;
+      hits++;
+      cone.mesh.scale.set(1.3, 0.12, 1.3);
+      message.textContent = "That cone had a family.";
+    }
+  easterEggs.land(position.x, position.z, touchedCars, hitCone, !!replay);
+
   pivot.position.copy(position).y += 0.5;
   touchdown = 0;
   jets.visible = false;
@@ -729,6 +721,7 @@ for (const surface of [stage, thumbPad]) {
       (event.pointerType === "mouse" && event.button !== 0)
     )
       return;
+    stage.focus({ preventScroll: true });
     aimKeys.clear();
     keyboardAiming = false;
     pointerSurface = surface;
@@ -740,7 +733,7 @@ for (const surface of [stage, thumbPad]) {
     thumbPad.classList.toggle("aiming", surface === thumbPad);
     dragStart.set(event.clientX, event.clientY);
     surface.setPointerCapture(pointer);
-    stage.focus({ preventScroll: true });
+    updatePointerAim(event);
   });
   surface.addEventListener("pointermove", (event) => {
     if (event.pointerId !== pointer) return;
@@ -748,21 +741,24 @@ for (const surface of [stage, thumbPad]) {
   });
   surface.addEventListener("pointerup", (event) => {
     if (event.pointerId !== pointer) return;
-    updatePointerAim(event);
+    // Touch lift-off can shift coordinates; commit the target already shown.
+    if (surface !== thumbPad) updatePointerAim(event);
     pointer = null;
     surface.releasePointerCapture(event.pointerId);
     thumbPad.classList.remove("aiming");
     launch();
   });
-  surface.addEventListener("pointercancel", cancelInput);
-  surface.addEventListener("lostpointercapture", () => {
-    if (pointer !== null) cancelInput();
+  surface.addEventListener("pointercancel", (event) => {
+    if (event.pointerId === pointer) cancelInput();
+  });
+  surface.addEventListener("lostpointercapture", (event) => {
+    if (event.pointerId === pointer) cancelInput();
   });
 }
 function updatePointerAim(event: PointerEvent) {
   const dx = event.clientX - dragStart.x;
   const dy = event.clientY - dragStart.y;
-  const delta = worldAt(event.clientX, event.clientY).sub(worldAt(dragStart.x, dragStart.y));
+  const delta = worldAt(event.clientX, event.clientY).sub(position);
   if (pointerSurface === thumbPad) {
     const radius = Math.min(thumbPad.clientWidth, thumbPad.clientHeight) / 2 - 16;
     const distance = Math.hypot(dx, dy);
@@ -788,6 +784,7 @@ function cancelInput() {
   aimKeys.clear();
   keyboardAiming = false;
   clearAim();
+  if (captured !== null) message.textContent = "Aim cancelled. Choose a new landing spot.";
 }
 mobileControls.addEventListener("change", cancelInput);
 window.addEventListener("resize", cancelInput);
@@ -798,6 +795,10 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (event.target instanceof HTMLInputElement) return;
+  if (event.key === "Escape") {
+    cancelInput();
+    return;
+  }
   if (event.key.toLowerCase() === "r") {
     reset();
     stage.focus({ preventScroll: true });

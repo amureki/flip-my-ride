@@ -11,9 +11,9 @@ npm ci
 npm run dev
 ```
 
-On mobile, drag on the compact thumb pad at the bottom center (beside the lot in landscape) to aim, then release to flip. Small drags provide fine aiming; drag farther, including beyond the pad, for more power. The landing marker stays visible above your hand. On desktop, drag anywhere on the lot in the direction you want to jump. Drag farther for more power; the ring shows the landing point. Release to flip. On a keyboard, hold arrows or WASD to move the landing marker (combine direction keys for diagonals), then press Space to jump. Press R or Retry to reset, including during a jump.
+On mobile, drag on the compact thumb pad at the bottom center (beside the lot in landscape) to aim, then release to flip. Small drags provide fine aiming; drag farther, including beyond the pad, for more power. The landing marker stays visible above your hand. Release commits that preview, ignoring finger drift during lift-off. Slide back to where you started the touch to cancel. On desktop, click a landing spot to flip there. Hold the mouse or trackpad button and move to adjust the landing ring before releasing. Targets beyond the nine-unit range are clamped to the nearest reachable point. Press Escape to cancel. On a keyboard, hold arrows or WASD to move the landing marker (combine direction keys for diagonals), then press Space to jump. Press R or Retry to reset, including during a jump.
 
-Land on cars, trolleys, or cones to flatten them and continue from the landing point. Each object adds one insurance claim the first time it is crushed. Wrecks remain until Retry or the next lot; landing on a wreck adds no further claim. Landing outside the lot still returns the player to the previous position. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
+Land on cars, trolleys, or cones to flatten them and continue from the landing point. Each object adds one insurance claim the first time it is crushed. Wrecks remain until Retry or the next lot; landing on a wreck adds no further claim. Aiming outside the lot stops the marker at the nearest valid point inside the curb. The car lands there without a reset or an extra claim. Flights can pass over obstacles. The car always finishes upright, facing the parking bay's direction.
 
 ## Lots
 

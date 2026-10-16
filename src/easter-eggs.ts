@@ -85,7 +85,7 @@ export function makeEasterEggs(sign: THREE.Group, car: THREE.Group, cone: THREE.
       if (newRun) discovered.clear();
     },
     land(x: number, z: number, cars: number[], hitCone: boolean, replay: boolean) {
-      if (!state.sign && Math.abs(x - sign.position.x) < 1.4 && Math.abs(z - sign.position.z) < 1.7) {
+      if (!state.sign && Math.abs(x - sign.position.x) < 2.1 && Math.abs(z - sign.position.z) < 1.7) {
         state.sign = true;
         if (!replay) discover(`sign:${signReply}`, `Sign language · ${signReply}`);
       }
