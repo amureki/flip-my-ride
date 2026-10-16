@@ -7,16 +7,16 @@ test("share URL preserves static-host path without challenge or tracking state",
     "https://example.com/tesla-flips/?tracking=1#flips=3&hits=1",
   );
   assert.equal(content.url, "https://example.com/tesla-flips/");
-  assert.match(content.text, /Roadster only does flips/);
+  assert.equal(content.text, "Tesla made it flip. I still can't park it.");
 });
 test("a completed run shares a boast with correct singular and plural", () => {
   assert.match(
     shareContent("https://example.com", { flips: 1, hits: 1 }).text,
-    /1 flip and 1 insurance claim/,
+    /1 flip\. 1 insurance claim\./,
   );
   assert.match(
     shareContent("https://example.com", { flips: 3, hits: 0 }).text,
-    /3 flips and 0 insurance claims/,
+    /3 flips\. 0 insurance claims\./,
   );
 });
 test("social composers receive encoded game URL and score text", () => {

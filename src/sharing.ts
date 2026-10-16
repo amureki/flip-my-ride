@@ -4,11 +4,16 @@ export function shareContent(currentUrl: string, score?: Score) {
   const url = new URL(currentUrl);
   url.search = "";
   url.hash = "";
+  let text = "Tesla made it flip. I still can't park it.";
+  if (score) {
+    const total = `${score.flips} ${score.flips === 1 ? "flip" : "flips"}. ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"}.`;
+    text = score.completedLots
+      ? `${total} ${score.completedLots} ${score.completedLots === 1 ? "lot" : "lots"} cleared. I earned my Licence to Flip.`
+      : `${total} Finally parked the Roadster${score.lot ? ` in ${score.lot}` : ""}.`;
+  }
   return {
     title: "Flip My Ride",
-    text: score
-      ? `${score.completedLots ? `I earned my Licence to Flip. ${score.completedLots}/${score.completedLots} lots cleared. Run total: ` : ""}It took me ${score.flips} ${score.flips === 1 ? "flip" : "flips"} and ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"} to park a car${score.lot ? ` in ${score.lot}` : ""}. Beat that.`
-      : "Someone made a parking game where the Roadster only does flips. Good luck.",
+    text,
     url: url.href,
   };
 }
