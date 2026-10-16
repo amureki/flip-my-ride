@@ -18,7 +18,6 @@ function inputFixture() {
   const landing = position.clone();
   const aim = {visible: false, position: new THREE.Vector3()};
   const aimLine = {visible: false, geometry: new THREE.BufferGeometry()};
-  const powerFill = {style: {width: '0'}};
   const message = {textContent: ''};
   const bounds = {x: 8.5, z: 7};
   const ring = {material: {color: new THREE.Color()}};

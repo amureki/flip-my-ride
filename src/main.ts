@@ -45,7 +45,6 @@ const mobileControls = matchMedia("(pointer: coarse)");
 let pointerSurface: HTMLElement = stage;
 const message = document.querySelector<HTMLDivElement>("#message")!;
 const flipsLabel = document.querySelector<HTMLSpanElement>("#flips")!;
-const powerFill = document.querySelector<HTMLElement>("#power-fill")!;
 const result = document.querySelector<HTMLDivElement>("#result")!;
 let levelIndex = 0;
 let attempt = 0;
@@ -412,7 +411,6 @@ function showAim(delta: THREE.Vector3) {
     landing.clone().setY(0.08),
   ]);
   aimLine.visible = true;
-  powerFill.style.width = `${(delta.length() / 9) * 100}%`;
   updateAimFeedback();
 }
 function updateAimFeedback() {
@@ -442,7 +440,6 @@ function updateAimFeedback() {
 function clearAim() {
   aim.visible = false;
   aimLine.visible = false;
-  powerFill.style.width = "0";
 }
 function launch(replayMove?: ReplayMove) {
   aimKeys.clear();
