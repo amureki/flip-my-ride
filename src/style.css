@@ -851,3 +851,34 @@ button:disabled {
     margin-top: 8px;
   }
 }
+
+#receipt-levels th:first-child { width: auto; }
+#receipt-levels td:last-child { vertical-align: middle; }
+#receipt-levels .retry-level { margin: 0; white-space: nowrap; }
+
+@media (pointer: coarse) {
+  #result.final-lot {
+    width: min(480px, calc(100% - 16px));
+    padding: 10px;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  #result.final-lot h2 { font-size: 20px; margin-bottom: 4px; }
+  .final-lot .receipt { display: grid; padding: 4px 0; }
+  .final-lot .receipt h3 { display: none; }
+  #result.final-lot #receipt-progress { order: 0; margin-bottom: 6px; }
+  .final-lot .receipt-totals { order: 1; display: flex; gap: 16px; font-size: 14px; }
+  .final-lot .receipt-totals div { flex: 1; gap: 6px; margin: 0; }
+  #result.final-lot #receipt-par { order: 2; margin: 6px 0 0; }
+  .final-lot #receipt-levels { order: 3; margin: 8px 0 0; }
+  .final-lot #receipt-levels caption { margin-bottom: 4px; }
+  .final-lot #receipt-levels th, .final-lot #receipt-levels td { padding: 2px; vertical-align: middle; }
+  .final-lot #receipt-levels .retry-level { min-width: 44px; min-height: 44px; padding: 6px; }
+  .final-lot .receipt-bill { order: 4; margin-top: 8px; padding-top: 6px; font-size: 12px; }
+  #result.final-lot #result-detail { order: 5; margin: 6px 0 0; font-size: 12px; }
+  #result.final-lot .receipt-footer { order: 6; margin-top: 6px; }
+  #result.final-lot #share-score-label { display: none; }
+  .final-lot .result-controls { padding-top: 4px; }
+}
+@media (pointer: coarse) and (max-height: 480px) and (min-width: 560px) {
+  #result.final-lot { width: min(720px, calc(100% - 16px)); }
+}

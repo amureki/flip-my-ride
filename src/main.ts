@@ -844,13 +844,13 @@ function showReceipt() {
         reset("next");
         stage.focus({ preventScroll: true });
       });
-      name.append(document.createElement("br"), retry);
       row.append(name);
       row.insertCell().textContent = String(round.flips);
       row.insertCell().textContent = String(round.hits);
       const par = row.insertCell();
       par.textContent = meetsCleanPar(round, levels[i].par) ? "Earned" : "Missed";
       par.append(document.createElement("br"), `≤${levels[i].par} ${levels[i].par === 1 ? "flip" : "flips"}`);
+      row.insertCell().append(retry);
     });
     const cleanPars = roundScores.filter((round, i) => meetsCleanPar(round, levels[i].par)).length;
     document.querySelector("#receipt-par")!.textContent = final
