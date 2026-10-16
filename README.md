@@ -1,4 +1,4 @@
-# Just Park It
+# Flip My Ride
 
 A small browser game inspired by the Roadster stunt presentation. The car only moves by flipping. Land completely inside the green parking bay to win.
 
@@ -34,7 +34,7 @@ Connect the repository. Use build command `npm run build`, output directory `dis
 
 ### Link previews and icons
 
-Set the build environment variable `SITE_URL` to the public game URL, including any project path (for example, `https://your-domain.com/just-park-it/`). GitHub Pages supplies this automatically through the deployment workflow. On Cloudflare Pages, set it in the project's build environment variables to the production URL.
+The public URL is https://flip.amureki.me/. `.env.production` sets `SITE_URL` for production builds. `public/CNAME` declares the GitHub Pages custom domain; configure the matching domain in the hosting settings and point its DNS record at the host. Override `SITE_URL` only when deploying to a different URL.
 
 The build puts canonical and absolute Open Graph/X image URLs in the HTML and generates `sitemap.xml`. Without `SITE_URL`, local builds still work, but print a warning and omit these URL-dependent fields. Metadata does not depend on JavaScript execution.
 

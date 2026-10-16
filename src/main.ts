@@ -314,6 +314,11 @@ function worldAt(x: number, y: number) {
 function showAim(delta: THREE.Vector3) {
   delta.clampLength(0, 9);
   landing.copy(position).add(delta);
+  if (position.distanceTo(landing) < 0.3) {
+    clearAim();
+    message.textContent = "Drag farther to flip.";
+    return;
+  }
   aim.position.copy(landing);
   aim.visible = true;
   aimLine.geometry.dispose();

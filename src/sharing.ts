@@ -5,7 +5,7 @@ export function shareContent(currentUrl: string, score?: Score) {
   url.search = "";
   url.hash = "";
   return {
-    title: "Just Park It",
+    title: "Flip My Ride",
     text: score
       ? `It took me ${score.flips} ${score.flips === 1 ? "flip" : "flips"} and ${score.hits} insurance ${score.hits === 1 ? "claim" : "claims"} to park a car. Beat that.`
       : "Someone made a parking game where the Roadster only does flips. Good luck.",

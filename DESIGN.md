@@ -1,5 +1,5 @@
 ---
-name: Just Park It
+name: Flip My Ride
 description: Full-screen parking game with minimal controls.
 colors:
   background: "#d5d8dc"
