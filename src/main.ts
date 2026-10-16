@@ -4,7 +4,7 @@ import { makeEasterEggs, type EggState } from "./easter-eggs";
 import { vehicleShapes } from "./vehicles";
 import { trackEvent } from "./analytics";
 import * as THREE from "three";
-import { makeLotBase, makeParkedCar, makeTree } from "./scenery";
+import { makeLotBase, makeTrafficAccess, makeParkedCar, makeTree } from "./scenery";
 import { makeDamage } from "./damage";
 import { makeAsphalt } from "./ground";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -170,6 +170,7 @@ function box(
   return mesh;
 }
 scene.add(makeLotBase());
+scene.add(makeTrafficAccess());
 scene.add(makeAsphalt(renderer.capabilities.getMaxAnisotropy()));
 const parkingBay = new THREE.Group();
 scene.add(parkingBay);
@@ -255,7 +256,7 @@ const carColors = [0xc78051, 0x5b7970, 0xe1b75f, 0x6383a3, 0xa66c70];
 const parkedVehicles = levels.flatMap((level, lot) => {
   const vehicles = [
     ...level.cars.map(([x, z, model]) => ({ x, z, model, route: undefined as TrafficRoute | undefined })),
-    ...(level.traffic ?? []).map(route => ({ x: route.from[0], z: route.from[1], model: route.model, route })),
+    ...(level.traffic ?? []).map(route => ({ ...trafficPosition(0, route), model: route.model, route })),
   ];
   return vehicles.map(({ x, z, model, route }, index) => {
     const root = makeParkedCar(carColors[index % carColors.length], model);
@@ -275,13 +276,11 @@ function simulateTraffic(states: DriverState[], seconds: number, grounded: {x: n
     bodies.push({state: states[parkedVehicles.length], at: time => trolleyDamage.damaged ? trolley.root.position : trolleyPosition(time, cartRoute),
       halfX: vertical ? 0.55 : 1.1, halfZ: vertical ? 1.1 : 0.55, fixed: trolleyDamage.damaged});
   }
-  parkedVehicles.forEach(({root, model, route}, index) => {
-    if (!root.visible) return;
+  parkedVehicles.forEach(({root, model, route, lot}, index) => {
+    if (lot !== levelIndex || !route && !root.visible) return;
     const body = vehicleShapes[model].body;
-    const heading = route ? trafficPosition(0, route).heading : root.rotation.y;
-    const cos = Math.abs(Math.cos(heading)), sin = Math.abs(Math.sin(heading));
-    bodies.push({ state: states[index], at: time => route && !carDamage[index].damaged ? trafficPosition(time, route) : root.position,
-      halfX: (cos * body.width + sin * body.length) / 2, halfZ: (sin * body.width + cos * body.length) / 2,
+    bodies.push({ state: states[index], at: time => route && !carDamage[index].damaged ? trafficPosition(time, route) : {...root.position, heading:root.rotation.y},
+      halfX: body.width / 2, halfZ: body.length / 2,
       fixed: !route || carDamage[index].damaged });
   });
   advanceTraffic(bodies, seconds);
@@ -303,10 +302,12 @@ function obstacleHeight(x: number, z: number, halfWidth = 0.75, halfLength = 1.3
     simulateTraffic(states, waitingDelay, position);
     simulateTraffic(states, Math.max(0, time - levelTime - waitingDelay), null);
   }
-  return parkedVehicles.reduce((height, { root, model, route }, index) => {
-    if (!root.visible) return height;
+  return parkedVehicles.reduce((height, { root, model, route, lot }, index) => {
+    if (lot !== levelIndex || !route && !root.visible) return height;
     const point = route && !carDamage[index]?.damaged ? trafficPosition(states[index].time, route) : root.position;
-    return Math.max(height, orientedVehicleHeight(model, x - point.x, z - point.z, root.rotation.y,
+    if ("active" in point && !point.active) return height;
+    const heading = "heading" in point ? point.heading : root.rotation.y;
+    return Math.max(height, orientedVehicleHeight(model, x - point.x, z - point.z, heading,
       halfWidth, halfLength, carDamage[index]?.roofDrop ?? 0, carDamage[index]?.bodyDrop ?? 0));
   }, 0);
 }
@@ -316,12 +317,25 @@ function updateTraffic(time: number, dt = 0) {
   const states = flight ? flightTraffic(time) : trafficSnapshot();
   if (!flight && dt > 0) simulateTraffic(states, dt, position);
   Object.assign(cartDriver, states[parkedVehicles.length]);
-  parkedVehicles.forEach(({ root, route, signals, driver }, index) => {
+  parkedVehicles.forEach(({ root, route, signals, driver, lot }, index) => {
     Object.assign(driver, states[index]);
     if (!route || !signals) return;
     signals.reverseLights.visible = false;
-    if (!root.visible || carDamage[index].damaged) { root.rotation.x = 0; return; }
+    signals.indicators.visible = false;
+    if (lot !== levelIndex || carDamage[index].damaged) { root.rotation.x = 0; return; }
     const point = trafficPosition(driver.time, route);
+    root.visible = point.active;
+    const opacity = THREE.MathUtils.clamp((11 - Math.abs(point.x)) / 1.5, 0, 1);
+    if (root.userData.trafficOpacity !== opacity) {
+      root.userData.trafficOpacity = opacity;
+      root.traverse(object => {
+        if (object instanceof THREE.Mesh && object.material instanceof THREE.Material) {
+          object.material.transparent = opacity < 1;
+          object.material.opacity = opacity;
+        }
+      });
+    }
+    signals.indicators.visible = point.active && point.turning && Math.floor(driver.time * 2.5) % 2 === 0;
     const nearPlayer = orientedVehicleHeight(route.model, position.x - point.x, position.z - point.z, point.heading, 1.5, 2.2) > 0;
     if (!flight && !replay && nearPlayer) {
       if (!waited[index] && driver.waiting) easterEggs.waitForPlayer(index);

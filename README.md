@@ -32,12 +32,12 @@ Play seven lots in order. After parking, Next lot advances and Retry restarts th
 | One Spot Over | Learn the short sideways flip. |
 | Full Lot | Find clear intermediate landings among parked cars. |
 | Unexpected Item | Time a landing around a runaway trolley. |
-| Reverse Psychology | Watch a car back out across your approach. |
+| Reverse Psychology | Watch one car reverse, join the aisle, and leave. |
 | Space Invaders | Catch a fixed bay while its indecisive occupant is away. |
-| After You. No, You. | Time landings around two drivers, including a sideways car in the aisle. |
+| After You. No, You. | Time landings around arrivals and departures sharing one aisle. |
 | Final Boss: Parking | Park among three moving cars and a trolley in a crowded lot. |
 
-Bays stay fixed. Other drivers reverse out, pause, and pull back into spaces on repeatable cycles. White reverse lights warn before movement. The landing ring warns about intact stationary cars and cones. Read the moving cars and trolley yourself; aiming does not reveal their future positions. Drivers and the trolley yield to occupied ground, including the player, other cars, and wrecks. Drivers exchange one beep when waiting for the player and resume smoothly when the way is clear. A long wait reveals “You can’t park there, mate.” Crashes with cars and the trolley occur on landing. Crushed cars stop at the impact point and count once. Landing fully inside the bay still wins if you crush its occupant. This adds a claim but does not block progress. There are no buttons, ice tiles, timers, or limited lives.
+Bays stay fixed. Cars enter from the left, turn into a space, reverse into the aisle, and exit on the right. Reverse Psychology has one departure; later lots receive staggered replacement arrivals. All seven lots have short road openings marked IN and EXIT. White reverse lights warn before backing out, and amber indicators show parking turns. The landing ring warns about intact stationary cars and cones. Read the moving cars and trolley yourself; aiming does not reveal their future positions. Drivers and the trolley yield to occupied ground, including the player, other cars, and wrecks. Drivers exchange one beep when waiting for the player and resume smoothly when the way is clear. A long wait reveals “You can’t park there, mate.” Crashes with cars and the trolley occur on landing. Crushed cars stop at the impact point and count once. Landing fully inside the bay still wins if you crush its occupant. This adds a claim but does not block progress. There are no buttons, ice tiles, timers, or limited lives.
 
 Every lot has a sign with a hidden reply. Hit a cone to wear it as a hat, or land on a car to make it reply with a "beep!" bubble. A third landing on the same car reveals "This is fine"; crushing a moving car discovers "Traffic jam." Clean parking earns a lot-specific receipt pun. Damage remains optional. The harder challenge is parking cleanly with fewer flips.
 

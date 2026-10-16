@@ -1,4 +1,5 @@
 import test from "node:test";
+import { levels } from "../src/levels.ts";
 import assert from "node:assert/strict";
 import { trolleyPosition, hitsTrolley } from "../src/trolley.ts";
 
@@ -18,12 +19,12 @@ test("collision includes the car footprint but excludes a clear landing", () => 
   assert.equal(hitsTrolley(-5.5, 4.8, 2, route), false);
 });
 
-test("final trolley leaves a safe landing window and clear staging gaps", () => {
-  const finalRoute = { from: [6, -5.4], to: [6, -1.8] } as const;
-  assert.equal(hitsTrolley(6, -5, 6, finalRoute), true);
-  assert.equal(hitsTrolley(6, -5, 2, finalRoute), false);
-  for (let time = 0; time < 8; time += 0.1) {
-    assert.equal(hitsTrolley(0, -5, time, finalRoute), false);
-    assert.equal(hitsTrolley(-6, 0, time, finalRoute), false);
+test("the final trolley crosses the exit aisle and leaves the target and staging areas clear", () => {
+  const finalRoute = levels[6].trolley!;
+  assert.equal(hitsTrolley(8,0,0,finalRoute),true);
+  assert.equal(hitsTrolley(8,0,2,finalRoute),false);
+  for(let time=0;time<8;time+=0.1) {
+    assert.equal(hitsTrolley(...levels[6].target,time,finalRoute),false);
+    assert.equal(hitsTrolley(...levels[6].start,time,finalRoute),false);
   }
 });

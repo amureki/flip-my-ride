@@ -151,7 +151,7 @@ test("replay preserves flight timing when reduced-motion preferences change", ()
   const {context} = inputFixture();
   vm.runInContext('showAim(new THREE.Vector3(2, 0, 0))', context);
   assert.equal(vm.runInContext('aimSymbols[0].visible', context), true);
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); carDamage.push({damaged: false}); parkedVehicles.push({root: parkedCars[0], model: "compact", driver: {time:0,speed:1,waiting:0,brake:0}}); updateAimFeedback()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); carDamage.push({damaged: false}); parkedVehicles.push({root: parkedCars[0], lot:0, model: "compact", driver: {time:0,speed:1,waiting:0,brake:0}}); updateAimFeedback()', context);
   assert.equal(vm.runInContext('aimSymbols[1].visible', context), true);
   assert.match(vm.runInContext('message.textContent', context), /Collision risk/);
   vm.runInContext('carDamage[0].damaged = true; updateAimFeedback()', context);
@@ -195,7 +195,7 @@ test("pad cancellation, retry and resize cannot launch a pending gesture", () =>
 
 test("landings on cars keep roof clearance and subsequent jumps start at roof height", () => {
   const {context} = inputFixture();
-  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); parkedVehicles.push({root: parkedCars[0], model: "compact"}); landing.set(2,0,0); launch()', context);
+  vm.runInContext('parkedCars.push({visible: true, position: new THREE.Vector3(2,0,0), rotation: new THREE.Euler()}); parkedVehicles.push({root: parkedCars[0], lot:0, model: "compact"}); landing.set(2,0,0); launch()', context);
   assert.equal(vm.runInContext('flight.to.y', context), 1.05);
   vm.runInContext('position.copy(flight.to); flight = null; landing.set(5,0,0); launch()', context);
   assert.equal(vm.runInContext('flight.from.y', context), 1.05);
@@ -364,9 +364,9 @@ test("landing on an occupied bay files a claim and completes without trapping th
     vm.runInContext(`
       reducedMotion.matches = ${reduced}; replay = {};
       const root = new THREE.Group(); root.position.set(5.7, 0, -4.8);
-      const route = {model: 'compact', from: [5.7,-4.8], to: [5.7,0.6], period: 11, pause: 1.8};
-      const signals = {reverseLights: {}};
-      parkedCars.push(root); parkedVehicles.push({root, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
+      const route = {model: 'compact', bay: [5.7,-4.8], parkFor: 4, speed: 2.5, gap: 2};
+      const signals = {reverseLights: {}, indicators: {}};
+      parkedCars.push(root); parkedVehicles.push({root, lot:0, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
       carDamage.push({damaged: false, roofDrop: 0, bodyDrop: 0, crush() {this.damaged = true}});
       target.set(5.7,0,-4.8); position.set(3,0,-0.5);
       showAim(target.clone().sub(position));
@@ -382,11 +382,11 @@ test("landing on an occupied bay files a claim and completes without trapping th
 test("traffic still resolves at arrival time without revealing a forecast", () => {
   const { context } = inputFixture();
   vm.runInContext(`
-    replay = {}; levelTime = 4;
+    replay = {}; levelTime = 10;
     const root = new THREE.Group();
-    const route = {model: 'compact', from: [5.7,-4.8], to: [5.7,0.6], period: 11, pause: 1.8};
-    const signals = {reverseLights: {}};
-    parkedCars.push(root); parkedVehicles.push({root, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
+    const route = {model: 'compact', bay: [5.7,-4.8], parkFor: 4, speed: 2.5, gap: 2};
+    const signals = {reverseLights: {}, indicators: {}};
+    parkedCars.push(root); parkedVehicles.push({root, lot:0, model:'compact', route, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}});
     carDamage.push({damaged: false, roofDrop: 0, bodyDrop: 0, crush() {this.damaged = true}});
     parkedVehicles[0].driver.time = levelTime; updateTraffic(levelTime); target.set(5.7,0,-4.8); position.set(3,0,-0.5);
     showAim(target.clone().sub(position));
@@ -401,7 +401,7 @@ test("aim warns about stationary cars and cones but never forecasts traffic or t
   const { context } = inputFixture();
   vm.runInContext(`
     const root = new THREE.Group(); root.position.set(2,0,0);
-    parkedVehicles.push({root, model: 'compact', route: {model: 'compact', from: [2,0], to: [2,4], period: 10, pause: 2}});
+    parkedVehicles.push({root, lot:0, model: 'compact', route: {model: 'compact', bay: [2,-4.8], parkFor: 4, speed: 2.5, gap: 2}});
     carDamage.push({damaged: false});
     levels[0].trolley = {from: [2,0], to: [2,0]};
     showAim(new THREE.Vector3(2,0,0));

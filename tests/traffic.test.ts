@@ -5,7 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as THREE from "three";
 import { levels } from "../src/levels.ts";
-import { advanceTraffic, driverTimeAfter, trafficPosition, orientedVehicleHeight, makeTrafficSignals } from "../src/traffic.ts";
+import { advanceTraffic, trafficOverlap, trafficDuration, driverTimeAfter, trafficPosition, orientedVehicleHeight, makeTrafficSignals } from "../src/traffic.ts";
 import { vehicleLandingHeight, vehicleShapes } from "../src/vehicles.ts";
 import { hitsTrolley, trolleyPosition } from "../src/trolley.ts";
 
@@ -13,29 +13,31 @@ const source = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8
 const route = levels[4].traffic![0];
 
 function advanceDriver(state, route, dt, player) {
-  const body = vehicleShapes[route.model].body, heading = trafficPosition(0, route).heading;
+  const body = vehicleShapes[route.model].body;
   const bodies = [{state, at: time => trafficPosition(time, route),
-    halfX: (Math.abs(Math.cos(heading))*body.width+Math.abs(Math.sin(heading))*body.length)/2,
-    halfZ: (Math.abs(Math.sin(heading))*body.width+Math.abs(Math.cos(heading))*body.length)/2}];
+    halfX: body.width/2, halfZ: body.length/2}];
   if (player) bodies.unshift({state:{time:0,speed:0,waiting:0,brake:0},at:()=>player,halfX:0.75,halfZ:1.3,fixed:true});
   advanceTraffic(bodies,dt);
 }
 
 
-test("drivers pause in spaces, warn before reversing, and repeat predictably", () => {
+test("drivers leave through the exit, disappear outside the lot, then arrive through the entrance", () => {
   const start = trafficPosition(0, route);
-  assert.deepEqual([start.x, start.z], route.from);
+  assert.deepEqual([start.x, start.z], route.bay);
   assert.equal(start.reversing, false);
-  const warning = trafficPosition(route.pause - 0.5, route);
-  assert.equal(warning.reversing, true);
-  assert.deepEqual([warning.x, warning.z], route.from);
-  const aisle = trafficPosition(route.period / 2, route);
-  assert.ok(Math.hypot(aisle.x - route.to[0], aisle.z - route.to[1]) < 1e-9);
-  assert.equal(aisle.reversing, false);
-  assert.deepEqual(trafficPosition(route.period, route), start);
-  const returning = trafficPosition(route.period - 1, route);
-  assert.ok(returning.z < route.to[1] && returning.z > route.from[1]);
-  assert.equal(returning.reversing, false);
+  assert.equal(trafficPosition(route.parkFor - 0.5, route).reversing, true);
+  let exited=false, hidden=false, entered=false, turns=0;
+  for(let time=0;time<trafficDuration(route);time+=0.05) {
+    const p=trafficPosition(time,route);
+    if(p.active && p.x>10) exited=true;
+    if(!p.active) hidden=true;
+    if(p.active && p.x < -10) entered=true;
+    if(p.turning)turns++;
+  }
+  assert.ok(exited && hidden && entered && turns>0);
+  assert.deepEqual(trafficPosition(trafficDuration(route),route),start);
+  const first=levels[3].traffic![0];
+  assert.equal(trafficPosition(100,first).active,false);
 });
 
 test("a target-space driver creates both occupied and clean landing windows", () => {
@@ -44,7 +46,7 @@ test("a target-space driver creates both occupied and clean landing windows", ()
     for (let time = 0; time < 40; time += 0.05) {
       const occupied = level.traffic!.some(route => {
         const p = trafficPosition(time, route);
-        return orientedVehicleHeight(route.model, level.target[0] - p.x, level.target[1] - p.z, p.heading) > 0;
+        return p.active && orientedVehicleHeight(route.model, level.target[0] - p.x, level.target[1] - p.z, p.heading) > 0;
       }) || !!level.trolley && hitsTrolley(...level.target, time, level.trolley);
       if (occupied) blocked++; else clear++;
     }
@@ -59,19 +61,20 @@ test("sideways cars use their rotated footprint for landing and roof support", (
     assert.equal(orientedVehicleHeight("suv", x, z, 0), vehicleLandingHeight("suv", x, z));
 });
 
-test("all seven lots keep reachable signs and traffic stays within the lot", () => {
+test("all seven lots keep reachable signs and use the side entrances", () => {
   assert.equal(levels.length, 7);
   assert.deepEqual(levels.slice(0, 3).map(level => level.name), ["One Spot Over", "Full Lot", "Unexpected Item"]);
   assert.deepEqual(levels.slice(3).map(level => level.traffic!.length), [1, 1, 2, 3]);
   assert.equal(new Set(levels.map(level => level.signReply)).size, 7);
   for (const level of levels) {
     assert.ok(level.cones.length > 0);
-    for (const route of level.traffic ?? []) for (let time = 0; time < route.period; time += 0.1) {
+    for (const route of level.traffic ?? []) for (let time = 0; time < trafficDuration(route); time += 0.1) {
       const p = trafficPosition(time, route);
       const body = vehicleShapes[route.model].body;
       const halfX = Math.abs(Math.cos(p.heading)) * body.width / 2 + Math.abs(Math.sin(p.heading)) * body.length / 2;
       const halfZ = Math.abs(Math.sin(p.heading)) * body.width / 2 + Math.abs(Math.cos(p.heading)) * body.length / 2;
-      assert.ok(Math.abs(p.x) + halfX < 8.5 && Math.abs(p.z) + halfZ < 7, level.name);
+      assert.ok(Math.abs(p.x) <= 14 && Math.abs(p.z) + halfZ < 7, level.name);
+      if(Math.abs(p.x) > 9) assert.equal(p.z,0);
       assert.equal(orientedVehicleHeight(route.model, -7.6 - p.x, level.sign[1] - p.z, p.heading), 0, level.name);
     }
   }
@@ -81,13 +84,13 @@ test("collision uses arrival time and damaged traffic stays at its impact positi
   const root = new THREE.Group();
   const signals = makeTrafficSignals(route.model, root);
   const carDamage = [{damaged: false, roofDrop: 0, bodyDrop: 0}];
-  const context = vm.createContext({ THREE, route, advanceTraffic, vehicleShapes, levels: [{}], levelIndex: 0, cartDriver: {time:0,speed:1,waiting:0,brake:0}, advanceDriver, driverTimeAfter, trafficPosition, orientedVehicleHeight,
-    parkedVehicles: [{root, route, model: route.model, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}}], carDamage, levelTime: 0, flight: null, replay: null, reducedMotion: {matches: false}, position: {x: -7, z: 5}, easterEggs: {waitForPlayer() {}, discover() {}} });
+  const context = vm.createContext({ THREE, route, trafficDuration, advanceTraffic, vehicleShapes, levels: [{}], levelIndex: 0, cartDriver: {time:0,speed:1,waiting:0,brake:0}, advanceDriver, driverTimeAfter, trafficPosition, orientedVehicleHeight,
+    parkedVehicles: [{root, lot:0, route, model: route.model, signals, driver: {time: 0, speed: 1, waiting: 0, brake: 0}}], carDamage, levelTime: 0, flight: null, replay: null, reducedMotion: {matches: false}, position: {x: -7, z: 5}, easterEggs: {waitForPlayer() {}, discover() {}} });
   const code = source.slice(source.indexOf("function simulateTraffic("), source.indexOf("const carDamage ="));
   vm.runInContext(ts.transpile(code), context);
   vm.runInContext("updateTraffic(0)", context);
   assert.ok(vm.runInContext("obstacleHeight(5.7, -4.8)", context) > 0);
-  assert.equal(vm.runInContext("obstacleHeight(5.7, -4.8, 0.75, 1.3, route.period / 2)", context), 0);
+  assert.equal(vm.runInContext("obstacleHeight(5.7, -4.8, 0.75, 1.3, trafficDuration(route) / 2)", context), 0);
   vm.runInContext("updateTraffic(3, 3)", context);
   const impact = root.position.clone();
   carDamage[0].damaged = true;
@@ -99,12 +102,12 @@ test("collision uses arrival time and damaged traffic stays at its impact positi
   carDamage[0].damaged = false;
   vm.runInContext("Object.assign(parkedVehicles[0].driver, {time: 0, speed: 1, waiting: 0, brake: 0})", context);
   vm.runInContext("updateTraffic(0)", context);
-  assert.deepEqual([root.position.x, root.position.z], route.from);
+  assert.deepEqual([root.position.x, root.position.z], route.bay);
 });
 
 test("drivers stop short of a grounded player, wait indefinitely, and resume without jumping", () => {
   for (const moving of [route, levels[5].traffic![1]]) {
-    const player = trafficPosition(moving.period / 2 - (moving.phase ?? 0), moving);
+    const player = {x:moving.bay[0],z:0};
     const state = {time: -(moving.phase ?? 0), speed: 1, waiting: 0, brake: 0};
     for (let i = 0; i < 1800; i++) {
       advanceDriver(state, moving, 1 / 60, player);
@@ -125,8 +128,9 @@ test("drivers stop short of a grounded player, wait indefinitely, and resume wit
 });
 
 test("a driver can move away when the player lands close, and ramp prediction matches movement", () => {
-  const state = {time: route.period / 2 + route.pause, speed: 0, waiting: 2, brake: 0};
-  const player = {x: route.to[0], z: route.to[1] + 2.5};
+  const state = {time: route.parkFor + 5, speed: 0, waiting: 2, brake: 0};
+  const point = trafficPosition(state.time,route);
+  const player = {x: point.x - 4, z: point.z};
   const expected = driverTimeAfter(state, 0.8);
   advanceDriver(state, route, 0.8, player);
   assert.equal(state.waiting, 0);
@@ -135,11 +139,11 @@ test("a driver can move away when the player lands close, and ramp prediction ma
 
 test("waiting emits one horn exchange and one long-wait discovery, without moving the player", () => {
   const root = new THREE.Group(), signals = makeTrafficSignals(route.model, root);
-  const player = new THREE.Vector3(...[route.to[0], 0, route.to[1]]);
+  const player = new THREE.Vector3(...[route.bay[0], 0, 0]);
   const driver = {time: 0, speed: 1, waiting: 0, brake: 0};
   const events: string[] = [];
-  const context = vm.createContext({advanceTraffic, vehicleShapes, levels: [{}], levelIndex: 0, cartDriver: {time:0,speed:1,waiting:0,brake:0}, trafficPosition, orientedVehicleHeight, advanceDriver, driverTimeAfter,
-    parkedVehicles: [{root, signals, route, model: route.model, driver}],
+  const context = vm.createContext({THREE, advanceTraffic, vehicleShapes, levels: [{}], levelIndex: 0, cartDriver: {time:0,speed:1,waiting:0,brake:0}, trafficPosition, orientedVehicleHeight, advanceDriver, driverTimeAfter,
+    parkedVehicles: [{root, lot:0, signals, route, model: route.model, driver}],
     carDamage: [{damaged: false}], position: player, flight: null, replay: null,
     reducedMotion: {matches: false},
     easterEggs: {waitForPlayer() {events.push('honk')}, discover(id: string) {events.push(id)}}});
@@ -147,7 +151,7 @@ test("waiting emits one horn exchange and one long-wait discovery, without movin
   vm.runInContext(ts.transpile(code), context);
   vm.runInContext('for(let i=0;i<900;i++) updateTraffic(i/60,1/60)', context);
   assert.deepEqual(events, ['honk','cant-park']);
-  assert.deepEqual(player.toArray(), [route.to[0],0,route.to[1]]);
+  assert.deepEqual(player.toArray(), [route.bay[0],0,0]);
   const held = root.position.clone();
   vm.runInContext('updateTraffic(20, 1)', context);
   assert.deepEqual(root.position, held);
@@ -165,12 +169,11 @@ test("waiting emits one horn exchange and one long-wait discovery, without movin
 test("all traffic and cart routes remain collision-free and keep making progress", () => {
   for (const level of levels.slice(3)) {
     const bodies = [];
-    if (level.trolley) bodies.push({state: {time:0,speed:1,waiting:0,brake:0}, at: (t: number) => trolleyPosition(t, level.trolley!), halfX:1.1, halfZ:0.55});
+    if (level.trolley) bodies.push({state: {time:0,speed:1,waiting:0,brake:0}, at: (t: number) => trolleyPosition(t, level.trolley!), halfX:level.trolley.from[0] === level.trolley.to[0] ? 0.55 : 1.1, halfZ:level.trolley.from[0] === level.trolley.to[0] ? 1.1 : 0.55});
     for (const route of level.traffic!) {
-      const shape = vehicleShapes[route.model].body, heading = trafficPosition(0,route).heading;
+      const shape = vehicleShapes[route.model].body;
       bodies.push({state:{time:0,speed:1,waiting:0,brake:0},at:(t: number)=>trafficPosition(t,route),
-        halfX:(Math.abs(Math.cos(heading))*shape.width+Math.abs(Math.sin(heading))*shape.length)/2,
-        halfZ:(Math.abs(Math.sin(heading))*shape.width+Math.abs(Math.cos(heading))*shape.length)/2});
+        halfX:shape.width/2, halfZ:shape.length/2});
     }
     for (const [x,z,model] of level.cars) {
       const shape=vehicleShapes[model].body;
@@ -182,10 +185,14 @@ test("all traffic and cart routes remain collision-free and keep making progress
       advanceTraffic(bodies,1/60);
       for(let i=0;i<bodies.length;i++) for(let j=i+1;j<bodies.length;j++) {
         const a=bodies[i],b=bodies[j],p=a.at(a.state.time),q=b.at(b.state.time);
-        assert.ok(Math.abs(p.x-q.x)>=a.halfX+b.halfX || Math.abs(p.z-q.z)>=a.halfZ+b.halfZ, `${level.name}: overlap ${i}/${j} at ${frame/60}`);
+        assert.ok(!trafficOverlap(p,q,a,b), `${level.name}: overlap ${i}/${j} at ${frame/60}`);
       }
     }
     bodies.forEach((body,i)=>{if(!body.fixed) assert.ok(body.state.time-recentTimes[i]>1, `${level.name}: stopped making progress at ${body.state.time}`)});
+    const offset = level.trolley ? 1 : 0;
+    level.traffic!.forEach((route,i) => {
+      if(!route.once) assert.ok(bodies[offset+i].state.time > trafficDuration(route)*2, `${level.name}: replacement arrivals stopped`);
+    });
   }
 });
 
@@ -218,7 +225,7 @@ test("landing forecasts and replay use the same yielding simulation, including t
   ].map(({model,route,x,z})=>{
     const root=new THREE.Group();root.position.set(x,0,z);
     if(route)root.rotation.y=trafficPosition(0,route).heading;
-    return {root,model,route,signals:route?makeTrafficSignals(model,root):undefined,driver:{time:0,speed:1,waiting:0,brake:0}};
+    return {root,lot:0,model,route,signals:route?makeTrafficSignals(model,root):undefined,driver:{time:0,speed:1,waiting:0,brake:0}};
   });
   const context=vm.createContext({THREE, advanceTraffic, trafficPosition, trolleyPosition, orientedVehicleHeight, vehicleShapes,
     parkedVehicles, levels:[level], levelIndex:0, levelTime:0, flight:null,replay:null,position:new THREE.Vector3(-6,0,5),
@@ -232,4 +239,20 @@ test("landing forecasts and replay use the same yielding simulation, including t
   const direct=vm.runInContext('JSON.stringify(trafficSnapshot())',context);
   vm.runInContext('for(let i=1;i<=120;i++) updateTraffic(6+i/60)',context);
   assert.equal(vm.runInContext('JSON.stringify(trafficSnapshot())',context),direct);
+});
+
+test("routes keep position and heading continuous on screen and inactive cars have no footprint", () => {
+  for (const level of levels.slice(3)) for (const route of level.traffic!) {
+    let previous=trafficPosition(0,route);
+    for(let t=1/240;t<trafficDuration(route)*2;t+=1/240) {
+      const point=trafficPosition(t,route);
+      if(previous.active && point.active) {
+        assert.ok(Math.hypot(point.x-previous.x,point.z-previous.z)<0.03);
+        const angle=Math.atan2(Math.sin(point.heading-previous.heading),Math.cos(point.heading-previous.heading));
+        assert.ok(Math.abs(angle)<0.03);
+      }
+      if(!point.active) assert.equal(trafficOverlap(point,point,{halfX:1,halfZ:2},{halfX:1,halfZ:2}),false);
+      previous=point;
+    }
+  }
 });

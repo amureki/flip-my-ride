@@ -117,3 +117,41 @@ export function makeTree(index: number) {
   root.rotation.y = index * 1.7;
   return root;
 }
+
+export function makeTrafficAccess() {
+  const root = new THREE.Group();
+  for (const side of [-1, 1]) {
+    const apron = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.375, 4.6),
+      new THREE.MeshStandardMaterial({color:0x737b83, roughness:0.9}));
+    apron.position.set(side * 9.9, -0.1625, 0);
+    apron.receiveShadow = true;
+    root.add(apron);
+    for (const z of [-2.4, 2.4]) {
+      const curb = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.2, 0.2),
+        new THREE.MeshStandardMaterial({color:0xb9bec0, roughness:0.9}));
+      curb.position.set(side * 9.9, -0.04, z);
+      root.add(curb);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.13,0.65,8),
+        new THREE.MeshStandardMaterial({color:0xe1b75f, roughness:0.8}));
+      post.position.set(side*9.5,0.25,z);
+      root.add(post);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = 256; canvas.height = 256;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#eeeede";
+    context.font = "bold 64px sans-serif";
+    context.textAlign = "center";
+    context.fillText(side < 0 ? "IN" : "EXIT",128,100);
+    context.lineWidth = 12;
+    context.strokeStyle = "#eeeede";
+    context.beginPath();context.moveTo(60,165);context.lineTo(195,165);
+    context.moveTo(155,130);context.lineTo(195,165);context.lineTo(155,200);context.stroke();
+    const marker = new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.2),
+      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));
+    marker.rotation.x = -Math.PI/2;
+    marker.position.set(side*9.9,0.035,0);
+    root.add(marker);
+  }
+  return root;
+}

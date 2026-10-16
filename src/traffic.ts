@@ -3,27 +3,54 @@ import { vehicleLandingHeight, vehicleShapes, type VehicleModel } from "./vehicl
 
 export type TrafficRoute = {
   model: VehicleModel;
-  from: readonly [number, number];
-  to: readonly [number, number];
-  period: number;
-  pause: number;
+  bay: readonly [number, number];
+  parkFor: number;
+  speed: number;
+  gap: number;
   phase?: number;
+  once?: boolean;
 };
 
+export function trafficDuration(route: TrafficRoute) {
+  return route.parkFor + 10 + 28 / route.speed + route.gap;
+}
+
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
+}
+
 export function trafficPosition(time: number, route: TrafficRoute) {
-  const age = ((time + (route.phase ?? 0)) % route.period + route.period) % route.period;
-  const travel = (route.period - 2 * route.pause) / 2;
-  let progress = 0;
-  if (age >= route.pause && age < route.pause + travel) progress = (age - route.pause) / travel;
-  else if (age >= route.pause + travel && age < 2 * route.pause + travel) progress = 1;
-  else if (age >= 2 * route.pause + travel) progress = 1 - (age - 2 * route.pause - travel) / travel;
-  const eased = progress * progress * (3 - 2 * progress);
-  return {
-    x: route.from[0] + (route.to[0] - route.from[0]) * eased,
-    z: route.from[1] + (route.to[1] - route.from[1]) * eased,
-    heading: Math.atan2(route.to[0] - route.from[0], route.to[1] - route.from[1]),
-    reversing: age >= route.pause - 0.75 && age < route.pause + travel,
-  };
+  const [x, z] = route.bay;
+  const turnX = x - 3;
+  const exitDuration = (14 - turnX) / route.speed;
+  const entryDuration = (turnX + 14) / route.speed;
+  const period = route.parkFor + 10 + exitDuration + entryDuration + route.gap;
+  const total = Math.max(0, time + (route.phase ?? 0));
+  let age = total % period;
+  const departureEnd = route.parkFor + 5 + exitDuration;
+  const point = {x, z, heading: 0, reversing: false, turning: false, active: true};
+  if (route.once && total >= departureEnd) return {...point, x:14, z:0, active:false};
+  if (age < route.parkFor) return {...point, reversing: age >= route.parkFor - 0.75};
+  age -= route.parkFor;
+  let reverse = true;
+  if (age >= 5) {
+    age -= 5;
+    if (age < exitDuration) return {...point, x:turnX + smoothstep(age / exitDuration) * (14 - turnX), z:0, heading:-Math.PI / 2};
+    age -= exitDuration;
+    if (age < route.gap) return {...point, x:14, z:0, active:false};
+    age -= route.gap;
+    if (age < entryDuration) return {...point, x:-14 + smoothstep(age / entryDuration) * (turnX + 14), z:0, heading:-Math.PI / 2};
+    age -= entryDuration;
+    reverse = false;
+  }
+  // The same curved parking maneuver runs backward on departure and forward on arrival.
+  const u = reverse ? 1 - age / 5 : age / 5;
+  const t = smoothstep(Math.max(0, Math.min(1, u))), v = 1 - t;
+  const px = v*v*v*turnX + 3*v*v*t*x + 3*v*t*t*x + t*t*t*x;
+  const pz = 3*v*t*t*(z * 0.4) + t*t*t*z;
+  const dx = 3*v*v*(x-turnX);
+  const dz = 6*v*t*(z*0.4) + 3*t*t*(z*0.6);
+  return {...point, x:px, z:pz, heading:Math.atan2(-dx,-dz), reversing:reverse, turning:true};
 }
 
 export function orientedVehicleHeight(model: VehicleModel, dx: number, dz: number, heading: number,
@@ -44,7 +71,14 @@ export function makeTrafficSignals(model: VehicleModel, car: THREE.Group) {
     reverseLights.add(light);
   }
   car.add(reverseLights);
-  return { reverseLights };
+  const indicators = new THREE.Group();
+  for (const z of [-body.length / 2 - 0.03, body.length / 2 + 0.03]) {
+    const light = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.09, 0.03), new THREE.MeshBasicMaterial({color:0xffb640}));
+    light.position.set(-body.width * 0.4, body.height - 0.08, z);
+    indicators.add(light);
+  }
+  car.add(indicators);
+  return { reverseLights, indicators };
 }
 
 export type DriverState = { time: number; speed: number; waiting: number; brake: number };
@@ -54,9 +88,23 @@ export function driverTimeAfter(state: DriverState, seconds: number) {
   return state.time + state.speed * ramp + ramp * ramp + seconds - ramp;
 }
 
+export type TrafficPose = {x: number; z: number; heading?: number; active?: boolean; turning?: boolean};
+
+export function trafficOverlap(a: TrafficPose, b: TrafficPose, first: {halfX:number; halfZ:number}, second: {halfX:number; halfZ:number}, margin = 0) {
+  if (a.active === false || b.active === false) return false;
+  const ah = a.heading ?? 0, bh = b.heading ?? 0;
+  const axes = [ah, ah + Math.PI / 2, bh, bh + Math.PI / 2];
+  return axes.every(axis => {
+    const separation = Math.abs((a.x-b.x)*Math.cos(axis) - (a.z-b.z)*Math.sin(axis));
+    const radiusA = first.halfX*Math.abs(Math.cos(axis-ah)) + first.halfZ*Math.abs(Math.sin(axis-ah));
+    const radiusB = second.halfX*Math.abs(Math.cos(axis-bh)) + second.halfZ*Math.abs(Math.sin(axis-bh));
+    return separation < radiusA + radiusB + margin;
+  });
+}
+
 export type TrafficBody = {
   state: DriverState;
-  at: (time: number) => { x: number; z: number };
+  at: (time: number) => TrafficPose;
   halfX: number;
   halfZ: number;
   fixed?: boolean;
@@ -69,37 +117,56 @@ export function advanceTraffic(bodies: TrafficBody[], seconds: number) {
     const current = bodies.map(b => b.at(b.state.time));
     const probe = bodies.map(b => b.at(b.state.time + 0.15));
     const blocked = bodies.map(b => !!b.fixed);
-    const overlaps = (a: {x: number; z: number}, b: {x: number; z: number}, i: number, j: number) =>
-      Math.abs(a.x - b.x) < bodies[i].halfX + bodies[j].halfX + 0.15 &&
-      Math.abs(a.z - b.z) < bodies[i].halfZ + bodies[j].halfZ + 0.15;
-    // Resolve against stopped bodies again after each decision. Earlier bodies have priority.
+    const overlaps = (a: TrafficPose, b: TrafficPose, i: number, j: number) => trafficOverlap(a,b,bodies[i],bodies[j],0.15);
+    const hasPriority = (a: number, b: number) => !!current[a].turning !== !!current[b].turning
+      ? !current[a].turning : a < b;
+    // Cars already in the aisle pass before cars entering it from a parking space.
     for (let pass = 0; pass < bodies.length; pass++) {
       for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
         if (blocked[i] && blocked[j]) continue;
         const a = blocked[i] ? current[i] : probe[i];
         const b = blocked[j] ? current[j] : probe[j];
         if (!overlaps(a, b, i, j)) continue;
+        if (current[i].active === false) { blocked[i] = true; continue; }
+        if (current[j].active === false) { blocked[j] = true; continue; }
         const approaching = (index: number, other: number) =>
           Math.hypot(probe[index].x - current[other].x, probe[index].z - current[other].z) <
           Math.hypot(current[index].x - current[other].x, current[index].z - current[other].z) - 1e-10;
-        if (!blocked[j] && approaching(j, i)) blocked[j] = true;
-        if (!blocked[i] && approaching(i, j) && overlaps(probe[i], current[j], i, j)) blocked[i] = true;
+        const obstructedI = approaching(i,j) && overlaps(probe[i],current[j],i,j);
+        const obstructedJ = approaching(j,i) && overlaps(probe[j],current[i],j,i);
+        if (obstructedI || obstructedJ) {
+          if (obstructedI) blocked[i] = true;
+          if (obstructedJ) blocked[j] = true;
+          continue;
+        }
+        const high = hasPriority(i,j) ? i : j, low = high === i ? j : i;
+        if (!blocked[low] && approaching(low, high)) blocked[low] = true;
       }
     }
-    // If two drivers meet at a crossing, the later driver backs off to clear it.
+    // The yielding driver can back off to clear a crossing, if there is room.
     const retreat = bodies.map((body, j) => {
-      if (body.fixed || !blocked[j] || body.state.waiting < 0.3) return false;
+      if (body.fixed || current[j].active === false) return false;
       const back = body.at(body.state.time - dt * 0.5);
-      const clearsPriority = bodies.some((other, i) => i < j && !other.fixed && blocked[i] && other.state.waiting >= 0.3 &&
-        overlaps(probe[i], current[j], i, j) &&
+      const clearsPriority = bodies.some((other, i) => i !== j && hasPriority(i,j) && !other.fixed && (blocked[i] || other.state.speed < 1) &&
+        overlaps(other.at(other.state.time + 0.6), current[j], i, j) &&
         Math.hypot(back.x-current[i].x, back.z-current[i].z) > Math.hypot(current[j].x-current[i].x, current[j].z-current[i].z) + 1e-10);
       return clearsPriority && bodies.every((other, i) => i === j || !overlaps(back, current[i], j, i));
     });
+    // Check the actual small step too: a turning bumper can approach while its centre moves away.
+    const proposed = bodies.map((body,i) => body.at(retreat[i] ? body.state.time-dt*0.5 : blocked[i] ? body.state.time : driverTimeAfter(body.state,dt)));
+    for (let pass=0;pass<bodies.length;pass++) {
+      for (let i=0;i<bodies.length;i++) for (let j=i+1;j<bodies.length;j++) {
+        if (!trafficOverlap(proposed[i],proposed[j],bodies[i],bodies[j]) || trafficOverlap(current[i],current[j],bodies[i],bodies[j])) continue;
+        blocked[i]=blocked[j]=true;
+        retreat[i]=retreat[j]=false;
+        proposed[i]=current[i];proposed[j]=current[j];
+      }
+    }
     bodies.forEach((body, i) => {
       if (body.fixed) return;
       const state = body.state;
       state.brake = Math.max(0, state.brake - dt);
-      if (blocked[i]) {
+      if (blocked[i] || retreat[i]) {
         if (!state.waiting) state.brake = 0.35;
         state.waiting += dt;
         if (retreat[i]) state.time -= dt * 0.5;
