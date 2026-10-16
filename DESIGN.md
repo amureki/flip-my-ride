@@ -22,9 +22,9 @@ User direction: simple game interface; no editorial palette or decorative page l
 
 The canvas fills the viewport. A small title, flip count, and Retry button sit at the top. Controls and status sit at the bottom. Neutral gray, black, and white frame the scene. Green identifies the parking target. No web fonts, oversized headings, page sections, or introductory copy.
 
-The orthographic camera fits the whole lot on desktop and mobile. Pointer dragging maps to the ground plane with a maximum nine-unit jump. The original procedural player model has a low angular wedge, black canopy, slim lights, rear wing, and four air nozzles. Parked cars retain their simple box shapes so the player is distinct.
+The orthographic camera fits the whole lot on desktop and mobile. Pointer dragging maps to the ground plane with a maximum nine-unit jump. The original procedural player model has a low angular wedge, black canopy, slim lights, rear wing, four underside air nozzles. Side exhaust originates at the body surface without visible hardware. Parked cars retain their simple box shapes so the player is distinct.
 
-A short crouch precedes takeoff. Strong jumps perform two rolls. Higher arcs, air jets, a landing bounce, and an expanding dust ring provide the comedy. Landing remains deterministic. The counter counts rolls. Reduced-motion mode retains a low jump arc and disables rolls, jets, bounce, and shockwave.
+A short crouch precedes takeoff. Strong jumps perform two rolls. Higher arcs, air jets, a landing bounce, and an expanding dust ring provide the comedy. Side jets switch from one side to the other halfway through each jump. Soft white vapor trails expand and fade in world space from active nozzles, using a fixed pool of 160 particles. Retry clears the vapor, and reduced-motion mode disables it. Landing remains deterministic. The counter counts rolls. Reduced-motion mode retains a low jump arc and disables rolls, jets, bounce, and shockwave.
 
 Text feedback uses a live region. A blue outline marks focus. The result overlay appears only on success. Retry clears particles, effects, and input state immediately. No camera shake or added controls.
 

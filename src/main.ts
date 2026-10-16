@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { shareContent, socialLinks } from "./sharing";
 const shareButtons = document.querySelectorAll<HTMLButtonElement>(
@@ -173,7 +174,8 @@ for (const [x, z, color] of [
   scene.add(car);
   parkedCars.push(car);
 }
-const { car, jets } = makeRoadster();
+const { car, jets, sideJets, exhausts } = makeRoadster();
+const exhaust = makeExhaust(scene, exhausts);
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const stunt = document.querySelector<HTMLElement>("#stunt")!;
 let touchdown = 1;
@@ -389,6 +391,7 @@ function reset() {
   flight = null;
   touchdown = 1;
   jets.visible = false;
+  sideJets.visible = false;
   stunt.hidden = true;
   shockwave.material.opacity = 0;
   pivot.scale.set(1, 1, 1);
@@ -420,6 +423,7 @@ function reset() {
     (particle.mesh.material as THREE.Material).dispose();
   }
   particles.length = 0;
+  exhaust.clear();
 }
 function finishFlight() {
   if (!flight) return;
@@ -464,6 +468,7 @@ function finishFlight() {
   pivot.position.copy(position).y = 0.5;
   touchdown = 0;
   jets.visible = false;
+  sideJets.visible = false;
   shockwave.position.copy(position).y = 0.05;
   stunt.textContent = hits > previousHits
     ? "CLAIM FILED."
@@ -712,6 +717,12 @@ renderer.setAnimationLoop((now: number) => {
     );
     jets.visible = !reducedMotion.matches && t > 0 && t < 0.86;
     jets.scale.y = 0.8 + Math.sin(flight.time * 48) * 0.2;
+    sideJets.visible = !reducedMotion.matches && t > 0.07 && t < 0.93;
+    sideJets.children.forEach((outlet, index) => {
+      // Opposite sides fire during spin-up and braking.
+      outlet.visible = t < 0.5 ? index < 2 : index >= 2;
+      outlet.scale.y = 0.85 + Math.sin(now / 1000 * 42) * 0.15;
+    });
     if (t === 1) finishFlight();
   } else if (touchdown < 1) {
     touchdown = Math.min(1, touchdown + dt * 1.8);
@@ -747,5 +758,6 @@ renderer.setAnimationLoop((now: number) => {
       particles.splice(i, 1);
     }
   }
+  exhaust.update(dt, !reducedMotion.matches);
   renderer.render(scene, camera);
 });

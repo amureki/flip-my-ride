@@ -136,6 +136,8 @@ export function makeRoadster() {
       car.add(hub);
     }
   const jets = new THREE.Group();
+  const exhausts: THREE.Object3D[] = [];
+  const sideJets = new THREE.Group();
   const plumeMaterial = new THREE.MeshBasicMaterial({
     color: 0xe8f6ff,
     transparent: true,
@@ -157,8 +159,28 @@ export function makeRoadster() {
       plume.rotation.z = Math.PI;
       plume.position.set(x, -0.58, z);
       jets.add(plume);
+      const outlet = new THREE.Object3D();
+      outlet.position.set(x, 0.1, z);
+      outlet.rotation.z = Math.PI;
+      jets.add(outlet);
+      exhausts.push(outlet);
     }
+  for (const side of [-1, 1]) {
+    for (const z of [-0.42, 0.42]) {
+      const outlet = new THREE.Group();
+      outlet.position.set(side * 0.8, 0.43, z);
+      outlet.rotation.z = -side * Math.PI / 2;
+      const plume = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.85, 12), plumeMaterial);
+      plume.rotation.z = Math.PI;
+      plume.position.y = 0.42;
+      outlet.add(plume);
+      sideJets.add(outlet);
+      exhausts.push(outlet);
+    }
+  }
+  sideJets.visible = false;
+  car.add(sideJets);
   jets.visible = false;
   car.add(jets);
-  return { car, jets };
+  return { car, jets, sideJets, exhausts };
 }
