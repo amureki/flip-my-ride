@@ -524,8 +524,8 @@ button:disabled {
 }
 @media (pointer: coarse) {
   #app {
-    --pad-height: 160px;
-    --controls-height: calc(var(--pad-height) + 136px + env(safe-area-inset-bottom));
+    --pad-height: 128px;
+    --controls-height: calc(var(--pad-height) + 48px + env(safe-area-inset-bottom));
   }
   #stage {
     top: max(90px, calc(env(safe-area-inset-top) + 76px));
@@ -534,6 +534,35 @@ button:disabled {
   }
   .instructions {
     bottom: max(8px, env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--pad-height);
+    grid-template-rows: 1fr auto 1fr auto;
+    column-gap: 16px;
+    align-items: center;
+  }
+  .instructions #message {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 0;
+    align-items: center;
+    font-size: 12px;
+  }
+  .instructions .power {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 4px auto;
+  }
+  .instructions .mobile-hint {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 0 auto;
+    max-width: 20ch;
+  }
+  .instructions .game-credit {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin-top: 4px;
+    font-size: 10px;
   }
   .instructions .desktop-hint {
     display: none;
@@ -544,9 +573,11 @@ button:disabled {
   #thumb-pad {
     display: block;
     position: relative;
-    width: min(320px, 100%);
+    grid-column: 2;
+    grid-row: 1 / 4;
+    width: var(--pad-height);
     height: var(--pad-height);
-    margin: 8px auto 4px;
+    margin: 0;
     border: 1px solid #8b949e;
     border-radius: 8px;
     background: #e5e8ec;
@@ -590,12 +621,23 @@ button:disabled {
   }
   #stage {
     top: max(80px, calc(env(safe-area-inset-top) + 66px));
-    right: 288px;
+    right: 200px;
     bottom: max(8px, env(safe-area-inset-bottom));
   }
   .instructions {
     left: auto;
     right: max(16px, env(safe-area-inset-right));
-    width: 256px;
+    width: 168px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto;
+    row-gap: 6px;
+  }
+  .instructions #thumb-pad {
+    grid-column: 1;
+    grid-row: 4;
+    margin-inline: auto;
+  }
+  .instructions .game-credit {
+    grid-row: 5;
   }
 }
