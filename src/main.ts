@@ -92,12 +92,24 @@ const target = new THREE.Vector3();
 const nextButton = document.querySelector<HTMLButtonElement>("#next-lot")!;
 const bounds = { x: 8.5, z: 7 };
 let renderer: THREE.WebGLRenderer;
+const canvas = document.createElement("canvas");
+let contextMessage = "";
+canvas.addEventListener("webglcontextcreationerror", (event) => {
+  contextMessage = (event as WebGLContextEvent).statusMessage;
+});
 try {
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-} catch {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+} catch (error) {
   document.querySelector<HTMLElement>("#error")!.hidden = false;
-  trackEvent("game_error", { reason: "webgl_unavailable" });
-  throw new Error("WebGL unavailable");
+  document.querySelector<HTMLButtonElement>("#reload")!.addEventListener("click", () => {
+    window.location.reload();
+  });
+  trackEvent("game_error", {
+    reason: "webgl_unavailable",
+    error_message: error instanceof Error ? error.message : String(error),
+    context_message: contextMessage,
+  });
+  throw error;
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;

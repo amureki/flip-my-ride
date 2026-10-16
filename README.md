@@ -58,7 +58,7 @@ Events use [Umami's custom event API](https://docs.umami.is/docs/tracker-functio
 | `share_clicked` | Sharing control used; includes method, header/result placement, and completion state. |
 | `share_result` | Native share resolved/cancelled/failed, clipboard copied, or manual copy required. |
 | `replay_started` | Recorded attempt playback requested. |
-| `game_error` | WebGL initialization failed. |
+| `game_error` | Renderer initialization failed; includes `reason: webgl_unavailable`, the original `error_message`, and the browser's `context_message` when available. |
 
 Level events include the level number/name, attempt number, flips, claims, and visible gameplay seconds since the attempt's first flip. Duration excludes hidden-tab time, waiting before the first flip, and replay playback. Game totals use saved scores, not discarded retries. Playback does not emit starts or completions. Share results cannot confirm that a post was published or delivered; manual-copy fallback cannot confirm copying.
 
