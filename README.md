@@ -136,6 +136,6 @@ In Unexpected Item, the trolley crosses the bay on a repeatable eight-second cyc
 
 Parked vehicles are original, unbadged compact, fastback, SUV, and semi tractor designs. The tractor appears in Unexpected Item. Mesh dimensions also define collision footprints and body/roof landing surfaces; these are stylized game units, not manufacturer specifications. No promotional photographs or manufacturer model assets are included. This is not legal clearance.
 
-Each lot has an optional clean-par goal: finish within its flip budget with zero claims. Goals are 1, 3, 3, 3, 4, 4, and 4 flips. Long jumps count as two flips. Receipts show each earned clean par and the final count; missing par never blocks the next lot.
+Each lot has an optional clean parking goal: finish within its flip budget with zero collisions. Goals are 1, 3, 3, 3, 4, 4, and 4 flips. Long jumps count as two flips. Receipts show each achieved clean parking goal and the final count; missing the goal never blocks the next lot.
 
 After clearing all seven lots, use Retry beside any level in the final receipt. Completing that lot returns to the updated final receipt. Other scores stay unchanged; the retried lot keeps the result with fewer claims, then fewer flips. Play again starts from level one while retaining personal bests. Progress and best scores are saved in this browser. Refresh restores the current level or completed receipt; unfinished attempts restart. Replays are not saved. Clearing browser site data removes the save.

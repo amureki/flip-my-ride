@@ -36,16 +36,16 @@ export function renderReceipt(
     row.append(name);
     row.insertCell().textContent = String(round.flips);
     row.insertCell().textContent = String(round.hits);
-    const par = row.insertCell();
-    par.textContent = meetsCleanPar(round, levels[i].par) ? "Earned" : "Missed";
-    par.append(document.createElement("br"), `≤${levels[i].par} ${levels[i].par === 1 ? "flip" : "flips"}`);
+    const cleanParking = row.insertCell();
+    cleanParking.textContent = meetsCleanPar(round, levels[i].par) ? "Achieved" : "Missed";
+    cleanParking.append(document.createElement("br"), `≤${levels[i].par} ${levels[i].par === 1 ? "flip" : "flips"}`);
     row.insertCell().append(retry);
   });
-  const cleanPars = rounds.filter((round, i) => meetsCleanPar(round, levels[i].par)).length;
-  document.querySelector("#receipt-par")!.textContent = final
-    ? `${cleanPars}/${levels.length} clean pars earned`
-    : meetsCleanPar(score, levels[levelIndex].par) ? "Clean par earned. Par-king perfection."
-    : `Clean par: ≤${levels[levelIndex].par} flips, 0 claims. Retry for the badge.`;
+  const cleanParkingCount = rounds.filter((round, i) => meetsCleanPar(round, levels[i].par)).length;
+  document.querySelector("#receipt-clean-parking")!.textContent = final
+    ? `Clean parking: ${cleanParkingCount}/${levels.length} lots`
+    : meetsCleanPar(score, levels[levelIndex].par) ? "Clean parking achieved"
+    : `Clean parking goal: ${levels[levelIndex].par} ${levels[levelIndex].par === 1 ? "flip" : "flips"} or fewer · 0 collisions. Retry for the badge.`;
   document.querySelector("#receipt-heading")!.textContent = final ? "Final receipt" : "Parking receipt";
   document.querySelector("#receipt-repairs")!.textContent = score.cars + score.trolleys + score.cones ? "We’ll be in touch." : "€0. Somehow.";
   document.querySelector("#result-title")!.textContent = final ? "Licence to Flip" : hits ? "Crash landing. Still parking." : "Parkour. But parked.";

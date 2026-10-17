@@ -695,7 +695,7 @@ function reset(reason: "retry" | "next" | "replay" | "initial" = "retry") {
   updateTraffic(0);
   document.querySelector("#lot-label")!.textContent =
     `${levelIndex + 1} / ${levels.length} · ${level.name}`;
-  document.querySelector("#par-goal")!.textContent = `Clean par: ≤${level.par} ${level.par === 1 ? "flip" : "flips"} · 0 claims${bestScores[levelIndex] && meetsCleanPar(bestScores[levelIndex]!, level.par) ? " · Earned" : ""}`;
+  document.querySelector("#clean-parking-goal")!.textContent = `Clean parking goal: ${level.par} ${level.par === 1 ? "flip" : "flips"} or fewer · 0 collisions${bestScores[levelIndex] && meetsCleanPar(bestScores[levelIndex]!, level.par) ? " · Achieved" : ""}`;
   const completedLastLot = gameCompleted || levelIndex === levels.length - 1;
   nextButton.textContent = completedLastLot ? "Play again" : "Next lot";
   nextButton.classList.toggle("secondary", completedLastLot);
