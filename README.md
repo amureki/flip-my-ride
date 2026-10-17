@@ -2,6 +2,10 @@
 
 A small browser game inspired by the Roadster stunt presentation. The car only moves by flipping. Land completely inside the green parking bay to win, even on top of another car.
 
+[![Watch 20 seconds of gameplay](assets/gameplay-preview.jpg)](assets/gameplay.mp4)
+
+[Watch gameplay](assets/gameplay.mp4) · [Play the game](https://flip.amureki.me/)
+
 ## Run locally
 
 Requires Node.js 22.12 or a compatible newer release.
