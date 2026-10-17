@@ -99,17 +99,22 @@ kbd {
   pointer-events: none;
 }
 #message {
-  min-height: 2.8em;
-  max-width: 42ch;
-  margin-inline: auto;
   display: flex;
   align-items: end;
   justify-content: center;
   line-height: 1.4;
   white-space: nowrap;
   font-weight: 700;
+  margin: 0;
+  position: absolute;
+  right: auto;
+  padding-bottom: 8px;
+  text-align: center;
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%) rotate(var(--edge-angle, 0rad));
+  pointer-events: none;
 }
-.desktop-hint, .mobile-hint {
+.mobile-hint {
   margin: 8px 0 4px;
   color: #444b55;
   font-size: 12px;
@@ -229,21 +234,10 @@ h2 {
   z-index: 3;
 }
 @media (max-width: 600px) {
-  header {
-    left: 14px;
-    right: 14px;
-    gap: 14px;
-  }
-  h1 {
-    font-size: 18px;
-  }
-  #road-instructions p span {
-    display: none;
-  }
   #message {
     font-size: 12px;
   }
-  }
+}
 
 button:disabled {
   opacity: 0.5;
@@ -301,7 +295,6 @@ button:disabled {
   font: inherit;
   margin-top: 8px;
 }
-
 
 .social-options svg {
   width: 20px;
@@ -566,7 +559,6 @@ button:disabled {
     align-items: center;
   }
 
-
   .game-controls .game-credit {
     grid-column: 1 / -1;
     grid-row: 2;
@@ -710,18 +702,6 @@ button:disabled {
   }
 }
 
-#message {
-  position: absolute;
-  right: auto;
-  max-width: none;
-  min-height: 0;
-  margin: 0;
-  padding-bottom: 8px;
-  text-align: center;
-  transform-origin: bottom center;
-  transform: translate(-50%, -100%) rotate(var(--edge-angle, 0rad));
-  pointer-events: none;
-}
 #app:has(#result:not([hidden])) > #message,
 #app:has(#error:not([hidden])) > #message,
 #app.replaying > #message { visibility: hidden; }
@@ -783,11 +763,11 @@ button:disabled {
 #receipt-levels { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; }
 #receipt-levels caption { text-align: left; font-weight: bold; margin-bottom: 8px; }
 #receipt-levels th, #receipt-levels td { padding: 4px 3px; line-height: 1.25; border-bottom: 1px dashed #d5d5d5; text-align: right; vertical-align: top; }
-#receipt-levels th:first-child { text-align: left; width: 44%; }
+#receipt-levels th:first-child { text-align: left; }
 #receipt-levels tbody th { font-weight: normal; }
 #receipt-levels td { font-variant-numeric: tabular-nums; }
 
-#receipt-levels .retry-level { display: inline-block; width: auto; min-height: 32px; margin: 3px 0 0; padding: 4px 10px; font-size: 12px; }
+#receipt-levels .retry-level { display: inline-block; width: auto; min-height: 32px; margin: 0; padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 
 #receipt-levels caption small { display: block; margin-top: 4px; font-weight: normal; }
 
@@ -852,9 +832,7 @@ button:disabled {
   }
 }
 
-#receipt-levels th:first-child { width: auto; }
 #receipt-levels td:last-child { vertical-align: middle; }
-#receipt-levels .retry-level { margin: 0; white-space: nowrap; }
 
 @media (pointer: coarse) {
   #result.final-lot {

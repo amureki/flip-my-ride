@@ -62,7 +62,7 @@ function inputFixture() {
   function worldAt(x, y) {return y > 600 ? new THREE.Vector3() : new THREE.Vector3(x, 0, y)}
   `;
   const functions = source.slice(source.indexOf('function showAim('), source.indexOf('function reset('));
-  const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('document.querySelector("#reset")'));
+  const events = source.slice(source.indexOf('for (const surface of [stage, thumbPad])'), source.indexOf('for (const button of document.querySelectorAll("#reset, #again"))'));
   vm.runInContext(ts.transpile(fixture + source.slice(source.indexOf("function simulateTraffic("), source.indexOf("const carDamage =")) + functions + events), context);
   vm.runInContext(ts.transpile(source.slice(source.indexOf('function finishFlight()'), source.indexOf('for (const surface of [stage, thumbPad])'))), context);
   return {handlers, padHandlers, keys, context};

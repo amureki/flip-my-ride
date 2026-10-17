@@ -1,3 +1,4 @@
+import { renderReceipt } from "./receipt-view";
 import { readProgress, writeProgress } from "./progress";
 import { trafficPosition, orientedVehicleHeight, makeTrafficSignals, type TrafficRoute, type DriverState, advanceTraffic, type TrafficBody } from "./traffic";
 import { makeParkingFeedback, fitsParkingBay } from "./parking-feedback";
@@ -14,7 +15,7 @@ import { makeExhaust } from "./exhaust";
 import { makeRoadster } from "./roadster";
 import { levels } from "./levels";
 import { makeTrolley, hitsTrolley, trolleyPosition } from "./trolley";
-import { runTotal, licenceVerdict, meetsCleanPar, bestRound, type RoundScore } from "./receipt";
+import { runTotal, meetsCleanPar, bestRound, type RoundScore } from "./receipt";
 import { shareContent, socialLinks } from "./sharing";
 type ReplayMove = {
   drivers: DriverState[];
@@ -25,6 +26,10 @@ type ReplayMove = {
   duration: number;
   anticipation: number;
 };
+const socialTemplate = document.querySelector<HTMLTemplateElement>("#social-buttons")!;
+for (const row of document.querySelectorAll(".social-options")) {
+  row.append(socialTemplate.content.cloneNode(true));
+}
 const shareButtons = document.querySelectorAll<HTMLButtonElement>(
   "[data-native-share]",
 );
@@ -821,64 +826,23 @@ function finishFlight() {
 }
 
 function showReceipt() {
-  const final = gameCompleted;
-    const score = final ? runTotal(roundScores) : roundScores[levelIndex];
-    document.querySelector("#receipt-progress")!.textContent = final ? `${levels.length}/${levels.length} lots cleared` : levels[levelIndex].name;
-    document.querySelector("#receipt-flips")!.textContent = String(score.flips);
-    document.querySelector("#receipt-claims")!.textContent = String(score.hits);
-    const breakdown = document.querySelector<HTMLTableElement>("#receipt-levels")!;
-    breakdown.hidden = !final;
-    breakdown.tBodies[0].replaceChildren();
-    if (final) roundScores.forEach((round, i) => {
-      const row = breakdown.tBodies[0].insertRow();
-      const name = document.createElement("th");
-      name.scope = "row";
-      name.textContent = `${i + 1}. ${levels[i].name}`;
-      const retry = document.createElement("button");
-      retry.type = "button";
-      retry.textContent = "Retry";
-      retry.className = "retry-level";
-      retry.setAttribute("aria-label", `Retry level ${i + 1}: ${levels[i].name}`);
-      retry.addEventListener("click", () => {
-        levelIndex = i;
-        reset("next");
-        stage.focus({ preventScroll: true });
-      });
-      row.append(name);
-      row.insertCell().textContent = String(round.flips);
-      row.insertCell().textContent = String(round.hits);
-      const par = row.insertCell();
-      par.textContent = meetsCleanPar(round, levels[i].par) ? "Earned" : "Missed";
-      par.append(document.createElement("br"), `≤${levels[i].par} ${levels[i].par === 1 ? "flip" : "flips"}`);
-      row.insertCell().append(retry);
-    });
-    const cleanPars = roundScores.filter((round, i) => meetsCleanPar(round, levels[i].par)).length;
-    document.querySelector("#receipt-par")!.textContent = final
-      ? `${cleanPars}/${levels.length} clean pars earned`
-      : meetsCleanPar(score, levels[levelIndex].par) ? "Clean par earned. Par-king perfection."
-      : `Clean par: ≤${levels[levelIndex].par} flips, 0 claims. Retry for the badge.`;
-    document.querySelector("#receipt-heading")!.textContent = final ? "Final receipt" : "Parking receipt";
-    document.querySelector("#receipt-repairs")!.textContent = score.cars + score.trolleys + score.cones ? "We’ll be in touch." : "€0. Somehow.";
-    result.hidden = false;
-    document.querySelector("#result-title")!.textContent = final ? "Licence to Flip" : hits ? "Crash landing. Still parking." : "Parkour. But parked.";
-    document.querySelector("#result-detail")!.textContent = final ? `${levels[levelIndex].parkedReply} ${licenceVerdict(score.hits)}`
-      : score.cars ? "Cars flattened. Now that’s compact parking."
-      : score.trolleys ? "Off your trolley. Into your spot."
-      : score.cones ? "Cone-gratulations. You made an impression."
-      : score.hits ? "A few claims to fame."
-      : levels[levelIndex].parkedReply;
-    document.querySelector("#result .receipt-footer")!.textContent = final && easterEggs.snapshot().hat
-      ? "All hail the Cone-queror. Long may you park."
-      : "Thank you for parking with a twist.";
-    message.textContent =
-      final
-        ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
-        : "The future of parallel parking.";
-    updateShareLinks();
-    const primaryAction = final
-      ? result.querySelector<HTMLAnchorElement>("[data-social]")!
-      : nextButton;
-    primaryAction.focus({ preventScroll: true });
+  renderReceipt({
+    rounds: roundScores, levelIndex, final: gameCompleted, hits,
+    coneHat: easterEggs.snapshot().hat,
+  }, (index) => {
+    levelIndex = index;
+    reset("next");
+    stage.focus({ preventScroll: true });
+  });
+  result.hidden = false;
+  message.textContent = gameCompleted
+    ? `All ${levels.length} lots parked. You earned that licence. Somehow.`
+    : "The future of parallel parking.";
+  updateShareLinks();
+  const primaryAction = gameCompleted
+    ? result.querySelector<HTMLAnchorElement>("[data-social]")!
+    : nextButton;
+  primaryAction.focus({ preventScroll: true });
   watchReplay.hidden = !moves.length;
 }
 
@@ -1013,14 +977,12 @@ function updateKeyboardAim(dt: number) {
     .multiplyScalar(dt * 6);
   showAim(landing.clone().sub(position).add(movement));
 }
-document.querySelector("#reset")!.addEventListener("click", () => {
-  reset();
-  stage.focus({ preventScroll: true });
-});
-document.querySelector("#again")!.addEventListener("click", () => {
-  reset();
-  stage.focus({ preventScroll: true });
-});
+for (const button of document.querySelectorAll("#reset, #again")) {
+  button.addEventListener("click", () => {
+    reset();
+    stage.focus({ preventScroll: true });
+  });
+}
 nextButton.addEventListener("click", () => {
   if (!won) return;
   levelIndex = gameCompleted ? 0 : (levelIndex + 1) % levels.length;

@@ -96,7 +96,68 @@
           <div
             class="social-options result-social"
             aria-label="Share your score"
-          >
+          ></div>
+          <div class="replay-actions">
+            <button id="watch-replay" class="secondary">Watch replay</button>
+          </div>
+          <div class="result-actions">
+            <button id="next-lot">Next lot</button
+            ><button id="again" class="secondary">Retry <kbd>R</kbd></button>
+          </div>
+        </div>
+          </div>
+        <div id="error" role="alert" hidden>
+          <h2>3D graphics could not start.</h2>
+          <p>Reload to try again. If that does not help, try another browser or device.</p>
+          <button id="reload" type="button">Reload</button>
+        </div>
+      </div>
+      <section id="replay-panel" aria-label="Lot replay" hidden>
+        <div class="replay-toolbar">
+          <p id="replay-status">Replay</p>
+          <button id="stop-replay">Back to score</button>
+        </div>
+      </section>
+      <header>
+        <h1>Flip My Ride</h1>
+        <div class="score"><span id="flips">0</span> flips</div>
+        <nav class="social-options" aria-label="Share game"></nav>
+        <button id="reset" title="Retry (R)" aria-keyshortcuts="R">
+          Retry <kbd>R</kbd>
+        </button>
+      </header>
+      <div class="lot-info"><p id="lot-label" aria-live="polite"></p><p id="par-goal"></p><p id="save-status" role="status" hidden>Progress could not be saved in this browser.</p></div>
+      <div id="discovery" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+      <aside id="rotation-hint" hidden aria-label="Screen orientation tip">
+        <p>Want a bigger view? Turn your phone sideways.</p>
+        <button id="dismiss-rotation-hint" aria-label="Dismiss orientation tip">Dismiss</button>
+      </aside>
+      <div class="top-social">
+        <p id="share-status" role="status" aria-live="polite"></p>
+        <input
+          id="share-link"
+          type="text"
+          aria-label="Game link — select and copy"
+          readonly
+          hidden
+        />
+      </div>
+        <div id="message" role="status" aria-live="polite" aria-atomic="true">
+          Choose your landing. Release to flip. Land in green.
+        </div>
+      <div class="game-controls">
+        <p class="mobile-hint">Drag to aim<br>Release to flip</p>
+        <p class="mobile-hint cancel-hint">Slide back to cancel</p>
+        <div id="thumb-pad" role="group" aria-label="Thumb pad. Drag to aim, release to flip, slide back to cancel.">
+          <span class="thumb-origin" aria-hidden="true"></span>
+          <span class="thumb-knob" aria-hidden="true"></span>
+        </div>
+        <footer class="game-credit">
+          For this Roadster parody, blame <a href="https://x.com/amureki" target="_blank" rel="noopener noreferrer">amureki</a>.
+        </footer>
+      </div>
+    </main>
+    <template id="social-buttons">
             <a
               data-social="x"
               target="_blank"
@@ -173,144 +234,7 @@
                 />
               </svg>
             </button>
-          </div>
-          <div class="replay-actions">
-            <button id="watch-replay" class="secondary">Watch replay</button>
-          </div>
-          <div class="result-actions">
-            <button id="next-lot">Next lot</button
-            ><button id="again" class="secondary">Retry <kbd>R</kbd></button>
-          </div>
-        </div>
-          </div>
-        <div id="error" role="alert" hidden>
-          <h2>3D graphics could not start.</h2>
-          <p>Reload to try again. If that does not help, try another browser or device.</p>
-          <button id="reload" type="button">Reload</button>
-        </div>
-      </div>
-      <section id="replay-panel" aria-label="Lot replay" hidden>
-        <div class="replay-toolbar">
-          <p id="replay-status">Replay</p>
-          <button id="stop-replay">Back to score</button>
-        </div>
-      </section>
-      <header>
-        <h1>Flip My Ride</h1>
-        <div class="score"><span id="flips">0</span> flips</div>
-        <nav class="social-options" aria-label="Share game">
-          <a
-            data-social="x"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Share on X"
-            aria-label="Share on X"
-            ><svg
-              width="20"
-              height="20"
-              aria-hidden="true"
-              focusable="false"
-              role="img"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"
-              /></svg></a
-          ><a
-            data-social="whatsapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Share on WhatsApp"
-            aria-label="Share on WhatsApp"
-            ><svg
-              width="20"
-              height="20"
-              aria-hidden="true"
-              focusable="false"
-              role="img"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"
-              /></svg></a
-          ><a
-            data-social="telegram"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Share on Telegram"
-            aria-label="Share on Telegram"
-            ><svg
-              width="20"
-              height="20"
-              aria-hidden="true"
-              focusable="false"
-              role="img"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
-              /></svg></a
-          ><button
-            data-native-share
-            aria-label="More sharing options"
-            title="More sharing options"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M12 16V3m-4 4 4-4 4 4M5 13v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"
-              />
-            </svg>
-          </button>
-        </nav>
-        <button id="reset" title="Retry (R)" aria-keyshortcuts="R">
-          Retry <kbd>R</kbd>
-        </button>
-      </header>
-      <div class="lot-info"><p id="lot-label" aria-live="polite"></p><p id="par-goal"></p><p id="save-status" role="status" hidden>Progress could not be saved in this browser.</p></div>
-      <div id="discovery" role="status" aria-live="polite" aria-atomic="true" hidden></div>
-      <aside id="rotation-hint" hidden aria-label="Screen orientation tip">
-        <p>Want a bigger view? Turn your phone sideways.</p>
-        <button id="dismiss-rotation-hint" aria-label="Dismiss orientation tip">Dismiss</button>
-      </aside>
-      <div class="top-social">
-        <p id="share-status" role="status" aria-live="polite"></p>
-        <input
-          id="share-link"
-          type="text"
-          aria-label="Game link — select and copy"
-          readonly
-          hidden
-        />
-      </div>
-        <div id="message" role="status" aria-live="polite" aria-atomic="true">
-          Choose your landing. Release to flip. Land in green.
-        </div>
-      <div class="game-controls">
-        <p class="mobile-hint">Drag to aim<br>Release to flip</p>
-        <p class="mobile-hint cancel-hint">Slide back to cancel</p>
-        <div id="thumb-pad" role="group" aria-label="Thumb pad. Drag to aim, release to flip, slide back to cancel.">
-          <span class="thumb-origin" aria-hidden="true"></span>
-          <span class="thumb-knob" aria-hidden="true"></span>
-        </div>
-        <footer class="game-credit">
-          For this Roadster parody, blame <a href="https://x.com/amureki" target="_blank" rel="noopener noreferrer">amureki</a>.
-        </footer>
-      </div>
-    </main>
+    </template>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
