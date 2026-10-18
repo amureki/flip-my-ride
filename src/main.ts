@@ -109,13 +109,23 @@ const target = new THREE.Vector3();
 const nextButton = document.querySelector<HTMLButtonElement>("#next-lot")!;
 const bounds = { x: 8.5, z: 7 };
 let renderer: THREE.WebGLRenderer;
-const canvas = document.createElement("canvas");
+let canvas = document.createElement("canvas");
 let contextMessage = "";
-canvas.addEventListener("webglcontextcreationerror", (event) => {
+const onContextCreationError = (event: Event) => {
   contextMessage = (event as WebGLContextEvent).statusMessage;
-});
+};
+canvas.addEventListener("webglcontextcreationerror", onContextCreationError);
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  } catch {
+    // Failed constructors leave Three.js listeners and may create a context while probing.
+    canvas.removeEventListener("webglcontextcreationerror", onContextCreationError);
+    canvas = document.createElement("canvas");
+    contextMessage = "";
+    canvas.addEventListener("webglcontextcreationerror", onContextCreationError);
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+  }
 } catch (error) {
   document.querySelector<HTMLElement>("#error")!.hidden = false;
   document.querySelector<HTMLButtonElement>("#reload")!.addEventListener("click", () => {
